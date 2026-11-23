@@ -108,12 +108,7 @@ async function loadProgress(){
  const {data,error}=await db.from("work_progress").select("id,work_item_id,period,actual_percent,created_at").order("period");
  if(error){console.warn(error);return;} progressRows=data||[]; renderWorkTable(); drawCurves(); updateStats();
 }
-async function loadBaseline(){
- const {data,error}=await db.from("s_curve_baseline").select("*").order("period");
- if(error){console.warn(error);return;} baselineRows=data||[];
- $("baselineTable").innerHTML=activeBaseline().map(r=>`<tr><td>${esc(r.period)}</td><td>${fmtPct(r.planned_cumulative)}</td></tr>`).join("")||'<tr><td colspan="2" class="empty">Baseline periode belum diinput.</td></tr>';
- drawCurves();
-}
+async function loadBaseline(){drawCurves();}
 function renderReports(){
  const allReports=[...virtualK3Reports,...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
  $("statReports").textContent=allReports.length;
@@ -126,13 +121,13 @@ function latestActual(workId){const rows=progressRows.filter(p=>p.work_item_id==
 function weightedActual(){return workItems.reduce((s,w)=>s+Number(w.weight_percent||0)*latestActual(w.id)/100,0);}
 const schedule33=[0.20,2.96,7.14,10.37,12.68,16.14,18.37,20.0,22.0,24.01,27.0,31.72,35.81,39.3,44.7,50.4,55.83,62.3,72.05,74.75,79.11,82.4,86.1,89.8,93.2,96.5,98.1,99.0,99.4,99.7,99.85,99.95,100];
 const baselinePeriod33=i=>"2026-CW"+String(i+1).padStart(2,"0");
-const activeBaseline=()=>baselineRows.length?baselineRows:schedule33.map((v,i)=>({period:baselinePeriod33(i),planned_cumulative:v}));
+const activeBaseline=()=>schedule33.map((v,i)=>({period:baselinePeriod33(i),planned_cumulative:v}));
 function planValue(){const rows=activeBaseline();return Number(rows[rows.length-1]?.planned_cumulative||0);}
 function updateStats(){
  const wt=workItems.reduce((s,w)=>s+Number(w.weight_percent||0),0);
  const a=weightedActual(),p=planValue();
  $("statPlan").textContent=fmtPct(p);$("statActual").textContent=fmtPct(a);
- $("weightTotal").textContent=fmtPct(wt)+(Math.abs(wt-100)>0.005?" ⚠ Periksa bobot":"");$("curvePlan").textContent=fmtPct(p);$("curveActual").textContent=fmtPct(a);$("curveDeviation").textContent=(a-p>=0?"+":"")+fmtPct(a-p);
+ $("curvePlan").textContent=fmtPct(p);$("curveActual").textContent=fmtPct(a);$("curveDeviation").textContent=(a-p>=0?"+":"")+fmtPct(a-p);
 }
 function renderWorkTable(){
  $("workTable").innerHTML=workItems.map(w=>`<tr><td>${esc(w.name)}</td><td>${fmtPct(w.weight_percent)}</td><td><b>${fmtPct(latestActual(w.id))}</b></td></tr>`).join("")||'<tr><td colspan="3" class="empty">Belum ada daftar pekerjaan.</td></tr>';
@@ -212,13 +207,6 @@ $("reportForm").addEventListener("submit",async e=>{
   const {error}=await db.from("progress_reports").insert(row);if(error)throw error;
   msg("reportMessage","Laporan berhasil dikirim ke database pusat.",true);$("reportForm").reset();$("reportDate").value=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);await loadReports();
  }catch(err){msg("reportMessage",err.message||"Gagal mengirim laporan.");}
-});
-$("baselineForm").addEventListener("submit",async e=>{
- e.preventDefault();try{
-  const row={period:$("baselinePeriod").value.trim(),planned_cumulative:Number($("baselinePercent").value),created_by:currentUser.id};
-  const {error}=await db.from("s_curve_baseline").upsert(row,{onConflict:"period"});if(error)throw error;
-  msg("baselineMessage","Titik rencana berhasil disimpan.",true);$("baselineForm").reset();await loadBaseline();
- }catch(err){msg("baselineMessage",err.message);}
 });
 $("progressForm").addEventListener("submit",async e=>{
  e.preventDefault();try{
@@ -337,9 +325,7 @@ function ppeRecord(w){
  if(ppeEvents.length>100)ppeEvents.length=100;
 }
 function ppeRenderEvents(){
- const active=ppeWorkers.filter(w=>w.issue);
- document.getElementById("ppeAlertLog").innerHTML=active.length?active.map(w=>'<tr><td>'+ppeTime()+'</td><td>'+ppeZoneName(w.zone)+'</td><td>'+ppeWorkerName(w)+'</td><td>'+w.issue+' tidak terdeteksi</td><td><span class="pill warn">Perlu pemeriksaan</span></td></tr>').join(""):'<tr><td colspan="5">Tidak ada kejadian aktif</td></tr>';
- document.getElementById("cctvEvents").innerHTML=ppeEvents.length?ppeEvents.slice(0,35).map(e=>'<tr><td>'+e.time+'</td><td>CAM-'+String(e.zone+1).padStart(2,"0")+' / '+ppeZoneName(e.zone)+'</td><td>'+e.worker+' · '+e.issue+' tidak terdeteksi</td><td>'+e.confidence+'</td><td>'+e.status+'</td></tr>').join(""):'<tr><td colspan="5">Belum ada kejadian</td></tr>';
+ document.getElementById("cctvEvents").innerHTML=ppeEvents.length?ppeEvents.slice(0,50).map(e=>'<tr><td>'+e.time+'</td><td>CAM-'+String(e.zone+1).padStart(2,"0")+' / '+ppeZoneName(e.zone)+'</td><td>'+e.worker+' · '+e.issue+' tidak terdeteksi</td><td>'+e.confidence+'</td><td>'+e.status+'</td></tr>').join(""):'<tr><td colspan="5">Belum ada kejadian</td></tr>';
 }
 function ppeStats(){
  const active=ppeWorkers.filter(w=>w.issue);
