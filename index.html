@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SMART PPE Vision – Pemantauan APD</title>
+<meta name="description" content="Prototipe dashboard pemantauan APD (helm, rompi, sepatu, sarung tangan) berbasis computer vision untuk proyek konstruksi: zona, peringatan, dan laporan K3.">
+<meta property="og:title" content="SMART PPE Vision – Pemantauan APD">
+<meta property="og:description" content="Dashboard pemantauan APD per zona dengan laporan K3 otomatis (data simulasi).">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F8F7F3;--card:#fff;--line:#EADFC4;--ink:#262626;--mut:#6b6b6b;--or:#FFB412;--gold:#C98A00;--soft:#FFF3D1;--ok:#2e7d4f;--bad:#c0392b;--mid:#b9770e;--track:#EFE7D2;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1a17;--card:#26241f;--line:#3d3829;--ink:#f3efe4;--mut:#b9b3a3;--soft:#3a3118;--ok:#5fc78a;--bad:#ff7b6b;--mid:#f0b34a;--track:#3a3526}}
+:root[data-theme="dark"]{--bg:#1b1a17;--card:#26241f;--line:#3d3829;--ink:#f3efe4;--mut:#b9b3a3;--soft:#3a3118;--ok:#5fc78a;--bad:#ff7b6b;--mid:#f0b34a;--track:#3a3526}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 Arial,Helvetica,sans-serif}
+h1,h2,.pop{font-family:Poppins,Arial,sans-serif;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding:16px 14px 28px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border-bottom:3px solid var(--or);padding-bottom:10px;margin-bottom:12px}
+header .ico{width:42px;height:42px;border-radius:50%;background:var(--or);display:grid;place-items:center;font-size:20px}
+h1{font-size:clamp(18px,3.4vw,26px)}
+header small{display:block;color:var(--mut);font-size:11px}
+.badge{background:var(--soft);border:1px solid var(--or);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700}
+.sp{margin-left:auto;display:flex;gap:8px;align-items:center}
+.live{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--bad);margin-right:5px;animation:bl 1.2s infinite}
+@keyframes bl{50%{opacity:.25}}
+button{font:600 12px Poppins,Arial,sans-serif;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 12px;border-radius:999px;cursor:pointer}
+button:hover{background:var(--soft)}
+button.on{background:var(--or);border-color:var(--or);color:#262626}
+.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+@media(max-width:760px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{border-left:5px solid var(--or)}
+.kpi small{display:block;color:var(--mut);font-size:10px;letter-spacing:.05em;text-transform:uppercase}
+.kpi b{font:700 24px Poppins,Arial,sans-serif}
+.kpi i{font-style:normal;font-size:11px;color:var(--mut)}
+.grid{display:grid;grid-template-columns:1.7fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.cams{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:520px){.cams{grid-template-columns:1fr}}
+.cam{border:2px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:#10151a;position:relative}
+.cam.on{border-color:var(--or)}
+.cam svg{display:block;width:100%;height:auto}
+.cam .tag{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:2px 7px;border-radius:6px}
+.cam .st{position:absolute;right:6px;top:6px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;color:#fff}
+.alerts{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto}
+.alerts li{display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line);padding:6px 0;animation:in .4s}
+@keyframes in{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
+.alerts .dot{width:10px;height:10px;border-radius:50%;background:var(--bad);flex:none}
+.alerts li.done .dot{background:var(--ok)}
+.alerts small{color:var(--mut);display:block;font-size:10px}
+.alerts button{margin-left:auto;padding:3px 9px;font-size:10px}
+.bar{margin-bottom:7px}.bar div{display:flex;justify-content:space-between;font-size:11px}
+.bar span.t{display:block;height:9px;border-radius:6px;background:var(--track);overflow:hidden}
+.bar span.t i{display:block;height:100%;background:linear-gradient(90deg,var(--or),var(--gold));transition:width .5s}
+.row2{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}
+@media(max-width:760px){.row2{grid-template-columns:1fr}}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.flow span,.chip{background:var(--soft);border:1px solid var(--or);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;display:inline-block}
+.chip.no{opacity:.4;text-decoration:line-through}
+.flow em{color:var(--gold);font-style:normal}
+.note{color:var(--mut);font-size:11px;margin:10px 2px 0}
+.toast{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--bad);color:#fff;padding:10px 14px;border-radius:10px;font-weight:700;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.3);opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none;max-width:260px}
+.toast.show{opacity:1;transform:none}
+.zg{display:grid;grid-template-columns:1.3fr 1fr;gap:12px}
+@media(max-width:900px){.zg{grid-template-columns:1fr}}
+.zc{border:2px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px;cursor:pointer}
+.zc.on{border-color:var(--or);background:var(--soft)}
+.zc h3{font:700 13px Poppins,Arial;margin:0 0 4px;display:flex;justify-content:space-between;gap:6px}
+.risk{font-size:10px;padding:2px 8px;border-radius:999px;color:#fff;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th,td{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left}
+th{color:var(--gold);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+td.n,th.n{text-align:right}
+.rg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:10px 0}
+@media(max-width:760px){.rg{grid-template-columns:1fr 1fr}}
+.rc{border-left:5px solid var(--or);background:var(--soft);border-radius:10px;padding:8px 10px}
+.rc small{display:block;color:var(--mut);font-size:10px;text-transform:uppercase}.rc b{font:700 20px Poppins,Arial}
+ul.rec{margin:6px 0 0;padding-left:18px}
+body.pr .tabs,body.pr header,body.pr #sMon,body.pr #sZon,body.pr .note,body.pr .rbtn{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="ico">🦺</div>
+  <div><h1>SMART PPE VISION</h1><small>Pemantauan APD · Gedung Akademi Civilweek, Surakarta</small></div>
+  <span class="badge">DEMO · data simulasi</span>
+  <div class="sp"><span><span class="live"></span><b id="clk"></b></span><button id="pz" type="button">⏸ Jeda</button><button id="rs" type="button">Reset</button></div>
+</header>
+<div class="tabs" id="tabs"><button class="on" data-t="sMon" type="button">Pemantauan</button><button data-t="sZon" type="button">Zona</button><button data-t="sRep" type="button">Laporan</button></div>
+
+<div id="sMon">
+<section class="kpis">
+  <div class="card kpi"><small>Pekerja terdeteksi</small><b id="kW">0</b><i>4 zona · 4 kamera aktif</i></div>
+  <div class="card kpi"><small>Kepatuhan APD</small><b id="kP">0%</b><i>target ≥ 95%</i></div>
+  <div class="card kpi"><small>Pelanggaran sesi ini</small><b id="kV">0</b><i id="kO">0 belum ditindak</i></div>
+  <div class="card kpi"><small>Respons rata-rata</small><b id="kR">—</b><i>sejak peringatan muncul</i></div>
+</section>
+<section class="grid">
+  <div class="card"><h2>Kamera langsung <span style="text-transform:none;letter-spacing:0;color:var(--mut)">· klik untuk memfilter zona</span></h2><div class="cams" id="cams"></div></div>
+  <aside style="display:grid;gap:12px;align-content:start">
+    <div class="card"><h2>Peringatan <span id="fl" style="text-transform:none;letter-spacing:0;color:var(--mut)"></span></h2><ul class="alerts" id="al"></ul></div>
+    <div class="card"><h2>Kepatuhan per APD</h2><div id="bars"></div></div>
+  </aside>
+</section>
+<section class="row2">
+  <div class="card"><h2>Tren kepatuhan (%)</h2><svg id="tr" viewBox="0 0 400 90" style="width:100%;height:auto"></svg></div>
+  <div class="card"><h2>Cara kerja</h2><div class="flow"><span>Kamera CCTV</span><em>→</em><span>Computer vision</span><em>→</em><span>Cek APD per zona</span><em>→</em><span>Peringatan</span><em>→</em><span>Laporan K3</span></div>
+  <p class="note" style="margin-top:8px">Kotak <b style="color:var(--ok)">hijau</b> = APD wajib zona lengkap, <b style="color:var(--bad)">merah</b> = ada yang kurang.</p></div>
+</section>
+</div>
+
+<div id="sZon" style="display:none">
+<section class="zg">
+  <div class="card"><h2>Denah zona proyek <span style="text-transform:none;letter-spacing:0;color:var(--mut)">· warna = tingkat kepatuhan saat ini</span></h2><svg id="map" viewBox="0 0 400 220" style="width:100%;height:auto"></svg>
+  <div class="flow" style="margin-top:6px"><span style="border-color:var(--ok)">≥ 95% aman</span><span style="border-color:var(--mid)">80–95% waspada</span><span style="border-color:var(--bad)">&lt; 80% kritis</span></div></div>
+  <div><div id="zc"></div></div>
+</section>
+</div>
+
+<div id="sRep" style="display:none">
+<section class="card" id="rep"></section>
+</div>
+<p class="note">Prototipe tampilan dengan data acak. Versi nyata menghubungkan kamera (RTSP) ke model deteksi objek di server, lalu mengirim peringatan ke dashboard dan WhatsApp/Telegram petugas K3.</p>
+</div>
+<div class="toast" id="ts"></div>
+
+<script>
+(function(){
+var $=function(s){return document.querySelector(s)};
+var IT=[['helm','Helm'],['rompi','Rompi'],['sepatu','Sepatu safety'],['sarung','Sarung tangan']];
+var VL={helm:'Tanpa helm',rompi:'Tanpa rompi',sepatu:'Tanpa sepatu safety',sarung:'Tanpa sarung tangan'};
+var Z=[{n:'Gerbang & pos jaga',r:['helm','rompi'],k:'Rendah',x:10,y:10,w:110,h:90},{n:'Galian & pondasi',r:['helm','rompi','sepatu','sarung'],k:'Tinggi',x:130,y:10,w:150,h:90},{n:'Lantai kerja & tower crane',r:['helm','rompi','sepatu','sarung'],k:'Tinggi',x:290,y:10,w:100,h:200},{n:'Area material',r:['helm','rompi','sepatu'],k:'Sedang',x:10,y:110,w:270,h:100}];
+var KC={Rendah:'#2e9d5a',Sedang:'#d68910',Tinggi:'#c0392b'};
+var W,A,TR,ZS,paused,filter,total,aid,t0,tab='sMon';
+function mk(c){return{c:c,x:30+Math.random()*260,y:100+Math.random()*50,dx:(Math.random()<.5?-1:1)*(.15+Math.random()*.35),p:{helm:1,rompi:1,sepatu:1,sarung:1}}}
+function ok(w){return Z[w.c].r.every(function(k){return w.p[k]})}
+function miss(w){var r=Z[w.c].r;for(var i=0;i<r.length;i++){if(!w.p[r[i]])return r[i]}return null}
+function now(){return new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+function toast(t){var e=$('#ts');e.textContent=t;e.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(function(){e.classList.remove('show')},2600)}
+function alertFor(w,k,q){total++;ZS[w.c].v++;ZS[w.c].k[k]=(ZS[w.c].k[k]||0)+1;A.unshift({id:++aid,c:w.c,k:k,t:now(),at:Date.now(),done:false,rs:0});if(!q)toast('⚠ Zona '+'ABCD'[w.c]+': '+VL[k])}
+function init(){W=[];A=[];TR=[];ZS=[];paused=false;filter=null;total=0;aid=0;t0=new Date();
+  for(var c=0;c<4;c++){ZS.push({v:0,k:{},so:0,sn:0});var n=3+(c%2);for(var i=0;i<n;i++)W.push(mk(c))}
+  W[1].p.helm=0;alertFor(W[1],'helm',1);W[5].p.rompi=0;alertFor(W[5],'rompi',1);W[9].p.sarung=0;alertFor(W[9],'sarung',1);
+  for(var i=0;i<20;i++)TR.push(88+Math.random()*10);
+  $('#pz').textContent='⏸ Jeda';draw()}
+function bg(c){var s='<rect width="320" height="180" fill="'+(c==1?'#c9b48a':'#9ec9e8')+'"/><rect y="'+(c==1?70:95)+'" width="320" height="85" fill="'+(c==1?'#8d7650':'#7d8a6a')+'"/>';
+  if(c==0)s+='<rect x="20" y="30" width="90" height="70" fill="#b8bcc2"/><rect x="230" y="60" width="70" height="40" fill="#d8d2c4"/><rect x="140" y="85" width="60" height="12" fill="#555"/>';
+  if(c==1)s+='<polygon points="60,100 260,100 235,150 85,150" fill="#6e5a3b"/><rect x="270" y="40" width="30" height="60" fill="#ddd"/>';
+  if(c==2)s+='<rect x="40" y="25" width="110" height="75" fill="#c8ccd2"/><line x1="230" y1="5" x2="230" y2="100" stroke="#e8b400" stroke-width="4"/><line x1="170" y1="12" x2="300" y2="12" stroke="#e8b400" stroke-width="4"/>';
+  if(c==3)s+='<rect x="30" y="70" width="60" height="30" fill="#a56a3a"/><rect x="110" y="75" width="70" height="25" fill="#8a8f96"/><rect x="220" y="68" width="60" height="32" fill="#b77f4a"/>';
+  return s}
+function wk(w){var g=ok(w),col=g?'#38b26a':'#e5483a',x=w.x,y=w.y,m=miss(w),s='<g><rect x="'+(x-5)+'" y="'+(y-12)+'" width="4" height="12" fill="#333"/><rect x="'+(x+1)+'" y="'+(y-12)+'" width="4" height="12" fill="#333"/>';
+  s+='<rect x="'+(x-6)+'" y="'+(y-2)+'" width="12" height="3" fill="'+(w.p.sepatu?'#111':'#c9a37a')+'"/>';
+  s+='<rect x="'+(x-7)+'" y="'+(y-32)+'" width="14" height="21" fill="'+(w.p.rompi?'#ff9f1a':'#4a5a7a')+'"/>';
+  if(w.p.rompi)s+='<rect x="'+(x-7)+'" y="'+(y-24)+'" width="14" height="2.5" fill="#e8e8e8"/>';
+  s+='<rect x="'+(x-10)+'" y="'+(y-30)+'" width="3" height="14" fill="'+(w.p.sarung?'#ffd400':'#c9a37a')+'"/><rect x="'+(x+7)+'" y="'+(y-30)+'" width="3" height="14" fill="'+(w.p.sarung?'#ffd400':'#c9a37a')+'"/><circle cx="'+x+'" cy="'+(y-38)+'" r="5.5" fill="#c9a37a"/>';
+  if(w.p.helm)s+='<path d="M'+(x-6.5)+' '+(y-39)+' a6.5 6.5 0 0 1 13 0z" fill="#ffd400"/>';
+  var lab=g?'APD lengkap':VL[m];
+  return s+'<rect x="'+(x-15)+'" y="'+(y-50)+'" width="30" height="56" fill="none" stroke="'+col+'" stroke-width="1.6"/><rect x="'+(x-15)+'" y="'+(y-60)+'" width="'+Math.max(34,lab.length*4.3)+'" height="10" fill="'+col+'"/><text x="'+(x-13)+'" y="'+(y-52)+'" font-size="7" fill="#fff" font-family="Arial">'+lab+'</text></g>'}
+function zst(c){var ws=W.filter(function(w){return w.c==c}),g=ws.filter(ok).length;return{n:ws.length,g:g,p:ws.length?g/ws.length*100:100}}
+function sc(p){return p>=95?'var(--ok)':p>=80?'var(--mid)':'var(--bad)'}
+function f1(n){return n.toFixed(1).replace('.',',')}
+function avgResp(){var d=A.filter(function(a){return a.done});return d.length?Math.round(d.reduce(function(s,a){return s+a.rs},0)/d.length):null}
+function draw(){
+  var h='';
+  for(var c=0;c<4;c++){var zs=zst(c),bad=zs.n-zs.g;
+    h+='<div class="cam'+(filter===c?' on':'')+'" data-c="'+c+'"><svg viewBox="0 0 320 180">'+bg(c)+W.filter(function(w){return w.c==c}).map(wk).join('')+'</svg><span class="tag">Zona '+'ABCD'[c]+' · CAM-0'+(c+1)+'</span><span class="st" style="background:'+(bad?'#e5483a':'#2e9d5a')+'">'+(bad?bad+' pelanggaran':'Aman')+'</span></div>'}
+  $('#cams').innerHTML=h;stats();if(tab=='sZon')zones()}
+function stats(){
+  var n=W.length,g=W.filter(ok).length,p=g/n*100,open=A.filter(function(a){return!a.done}).length,ar=avgResp();
+  $('#kW').textContent=n;$('#kP').textContent=f1(p)+'%';$('#kP').style.color=sc(p);$('#kV').textContent=total;$('#kO').textContent=open+' belum ditindak';$('#kR').textContent=ar===null?'—':ar+' dtk';
+  $('#bars').innerHTML=IT.map(function(it){var rel=W.filter(function(w){return Z[w.c].r.indexOf(it[0])>-1}),v=rel.filter(function(w){return w.p[it[0]]}).length/rel.length*100;return '<div class="bar"><div><span>'+it[1]+'</span><b>'+v.toFixed(0)+'%</b></div><span class="t"><i style="width:'+v+'%"></i></span></div>'}).join('');
+  var L=A.filter(function(a){return filter===null||a.c===filter}).slice(0,8);
+  $('#fl').textContent=filter===null?'· semua zona':'· Zona '+'ABCD'[filter];
+  $('#al').innerHTML=L.length?L.map(function(a){return '<li class="'+(a.done?'done':'')+'"><span class="dot"></span><span>'+VL[a.k]+'<small>'+a.t+' · Zona '+'ABCD'[a.c]+' '+Z[a.c].n+'</small></span>'+(a.done?'<small style="margin-left:auto">Ditindak</small>':'<button type="button" data-a="'+a.id+'">Tindak</button>')+'</li>'}).join(''):'<li><small>Tidak ada peringatan.</small></li>';
+  var yv=function(v){return 85-(Math.max(60,Math.min(100,v))-60)/40*80},pts=TR.map(function(v,i){return(i*400/(TR.length-1)).toFixed(1)+','+yv(v).toFixed(1)}).join(' ');
+  $('#tr').innerHTML='<line x1="0" x2="400" y1="'+yv(95)+'" y2="'+yv(95)+'" stroke="var(--ok)" stroke-dasharray="4 3"/><polyline points="'+pts+'" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linejoin="round"/>'}
+function zones(){
+  var m='';Z.forEach(function(z,c){var s=zst(c);m+='<g data-c="'+c+'" style="cursor:pointer"><rect x="'+z.x+'" y="'+z.y+'" width="'+z.w+'" height="'+z.h+'" rx="8" fill="'+sc(s.p)+'" fill-opacity=".18" stroke="'+(filter===c?'#FFB412':sc(s.p))+'" stroke-width="'+(filter===c?4:2)+'"/><text x="'+(z.x+8)+'" y="'+(z.y+16)+'" font-size="10" font-weight="700" fill="currentColor">Zona '+'ABCD'[c]+' · '+z.n+'</text><text x="'+(z.x+8)+'" y="'+(z.y+30)+'" font-size="9" fill="currentColor" opacity=".7">'+f1(s.p)+'% · '+s.n+' pekerja</text>';
+    W.forEach(function(w){if(w.c!==c)return;var dx=z.x+10+(w.x-25)/270*(z.w-20),dy=z.y+46+((w.y-100)/50)*(z.h-62);m+='<circle cx="'+dx.toFixed(1)+'" cy="'+dy.toFixed(1)+'" r="4.5" fill="'+(ok(w)?'#38b26a':'#e5483a')+'" stroke="#fff" stroke-width="1"/>'});m+='</g>'});
+  $('#map').innerHTML=m;
+  $('#zc').innerHTML=Z.map(function(z,c){var s=zst(c);return '<div class="zc'+(filter===c?' on':'')+'" data-c="'+c+'"><h3><span>Zona '+'ABCD'[c]+' · '+z.n+'</span><span class="risk" style="background:'+KC[z.k]+'">Risiko '+z.k+'</span></h3><div style="margin-bottom:5px">'+IT.map(function(it){return '<span class="chip'+(z.r.indexOf(it[0])<0?' no':'')+'">'+it[1]+'</span> '}).join('')+'</div><div class="bar"><div><span>'+s.n+' pekerja · '+ZS[c].v+' pelanggaran sesi ini</span><b style="color:'+sc(s.p)+'">'+f1(s.p)+'%</b></div><span class="t"><i style="width:'+s.p+'%"></i></span></div></div>'}).join('')}
+function repData(){
+  var nowD=new Date(),mins=Math.max(1,Math.round((nowD-t0)/60000)),op=A.filter(function(a){return!a.done}).length,ar=avgResp(),sn=0,so=0,kinds={};
+  ZS.forEach(function(z){sn+=z.sn;so+=z.so;for(var k in z.k)kinds[k]=(kinds[k]||0)+z.k[k]});
+  var avg=sn?so/sn*100:W.filter(ok).length/W.length*100;
+  var rows=Z.map(function(z,c){var s=zst(c),a=ZS[c].sn?ZS[c].so/ZS[c].sn*100:s.p;return{n:'Zona '+'ABCD'[c]+' · '+z.n,k:z.k,v:ZS[c].v,now:s.p,avg:a}});
+  var worst=rows.slice().sort(function(a,b){return a.avg-b.avg})[0],kk=Object.keys(kinds).sort(function(a,b){return kinds[b]-kinds[a]})[0];
+  var rec=[];
+  if(worst.avg<95)rec.push('Perketat inspeksi di '+worst.n+' (rata-rata kepatuhan '+f1(worst.avg)+'%, di bawah target 95%).');
+  if(kk)rec.push('Lakukan briefing singkat tentang '+VL[kk].toLowerCase().replace('tanpa ','penggunaan ')+' — pelanggaran terbanyak ('+kinds[kk]+' kejadian).');
+  if(op>0)rec.push(op+' peringatan belum ditindak; tugaskan petugas K3 untuk menindaklanjuti.');
+  if(ar!==null&&ar>60)rec.push('Respons rata-rata '+ar+' detik; targetkan di bawah 60 detik.');
+  if(!rec.length)rec.push('Kepatuhan APD baik; pertahankan pengawasan rutin.');
+  return{tgl:nowD.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),per:t0.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+' – '+nowD.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+' ('+mins+' menit)',avg:avg,total:total,op:op,ar:ar,rows:rows,kinds:kinds,rec:rec}}
+function report(){
+  var d=repData();
+  $('#rep').innerHTML='<h2>Laporan K3 · Kepatuhan APD</h2><div style="font-size:12px;color:var(--mut)">Proyek: Pembangunan Gedung Akademi Civilweek · '+d.tgl+'<br>Periode pemantauan: '+d.per+'</div>'+
+  '<div class="rg"><div class="rc"><small>Kepatuhan rata-rata</small><b style="color:'+sc(d.avg)+'">'+f1(d.avg)+'%</b></div><div class="rc"><small>Total pelanggaran</small><b>'+d.total+'</b></div><div class="rc"><small>Sudah ditindak</small><b>'+(d.total-d.op)+'</b></div><div class="rc"><small>Respons rata-rata</small><b>'+(d.ar===null?'—':d.ar+' dtk')+'</b></div></div>'+
+  '<h2 style="margin-top:6px">Ringkasan per zona</h2><table><tr><th>Zona</th><th>Risiko</th><th class="n">Pelanggaran</th><th class="n">Saat ini</th><th class="n">Rata-rata</th></tr>'+d.rows.map(function(r){return '<tr><td>'+r.n+'</td><td>'+r.k+'</td><td class="n">'+r.v+'</td><td class="n" style="color:'+sc(r.now)+'">'+f1(r.now)+'%</td><td class="n" style="color:'+sc(r.avg)+'"><b>'+f1(r.avg)+'%</b></td></tr>'}).join('')+'</table>'+
+  '<h2 style="margin-top:12px">Jenis pelanggaran</h2>'+(Object.keys(d.kinds).length?Object.keys(d.kinds).map(function(k){return '<span class="chip">'+VL[k]+': '+d.kinds[k]+'</span> '}).join(''):'<small>Belum ada.</small>')+
+  '<h2 style="margin-top:12px">Log kejadian terbaru</h2><table><tr><th>Waktu</th><th>Zona</th><th>Kejadian</th><th>Status</th></tr>'+A.slice(0,8).map(function(a){return '<tr><td>'+a.t+'</td><td>Zona '+'ABCD'[a.c]+'</td><td>'+VL[a.k]+'</td><td>'+(a.done?'Ditindak ('+a.rs+' dtk)':'<b style="color:var(--bad)">Belum</b>')+'</td></tr>'}).join('')+'</table>'+
+  '<h2 style="margin-top:12px">Rekomendasi otomatis</h2><ul class="rec">'+d.rec.map(function(r){return '<li>'+r+'</li>'}).join('')+'</ul>'+
+  '<div class="rbtn" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button id="cp" type="button">Salin laporan (teks)</button><button id="pr" type="button">Cetak / simpan PDF</button><span id="cm" style="font-size:11px;color:var(--ok);align-self:center"></span></div>'}
+function txt(){var d=repData();return ['LAPORAN K3 – KEPATUHAN APD','Proyek: Pembangunan Gedung Akademi Civilweek',d.tgl,'Periode: '+d.per,'','Kepatuhan rata-rata: '+f1(d.avg)+'%','Total pelanggaran: '+d.total+' (belum ditindak: '+d.op+')','Respons rata-rata: '+(d.ar===null?'-':d.ar+' detik'),'','Per zona:'].concat(d.rows.map(function(r){return '- '+r.n+': '+r.v+' pelanggaran, rata-rata '+f1(r.avg)+'%'})).concat(['','Rekomendasi:']).concat(d.rec.map(function(r){return '- '+r})).join('\n')}
+function copy(){var t=txt(),ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();var okc=false;try{okc=document.execCommand('copy')}catch(e){}document.body.removeChild(ta);$('#cm').textContent=okc?'Tersalin ✓':'Salin manual: blok teks laporan di atas'}
+function step(){if(paused)return;W.forEach(function(w){w.x+=w.dx;if(w.x<25||w.x>295)w.dx*=-1});draw()}
+function mutate(){if(paused)return;var w=W[Math.floor(Math.random()*W.length)];
+  if(ok(w)){if(Math.random()<.4){var r=Z[w.c].r,k=r[Math.floor(Math.random()*r.length)];w.p[k]=0;alertFor(w,k)}}else if(Math.random()<.5){w.p[miss(w)]=1}}
+function trend(){if(paused)return;var g=W.filter(ok).length;TR.push(g/W.length*100);if(TR.length>20)TR.shift();for(var c=0;c<4;c++){var s=zst(c);ZS[c].so+=s.g;ZS[c].sn+=s.n}if(tab=='sRep')report()}
+$('#tabs').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;tab=b.dataset.t;['sMon','sZon','sRep'].forEach(function(id){$('#'+id).style.display=id==tab?'':'none'});Array.prototype.forEach.call(document.querySelectorAll('#tabs button'),function(x){x.classList.toggle('on',x===b)});if(tab=='sZon')zones();if(tab=='sRep')report()});
+function pick(e){var c=e.target.closest('[data-c]');if(!c)return;var i=+c.dataset.c;filter=filter===i?null:i;draw()}
+$('#cams').addEventListener('click',pick);$('#zc').addEventListener('click',pick);$('#map').addEventListener('click',pick);
+$('#al').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var a=A.filter(function(x){return x.id==b.dataset.a})[0];if(a){a.done=true;a.rs=Math.round((Date.now()-a.at)/1000);stats()}});
+$('#rep').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;if(b.id=='cp')copy();if(b.id=='pr'){document.body.classList.add('pr');try{window.print()}catch(x){}setTimeout(function(){document.body.classList.remove('pr')},500)}});
+$('#pz').addEventListener('click',function(){paused=!paused;this.textContent=paused?'▶ Lanjut':'⏸ Jeda'});
+$('#rs').addEventListener('click',function(){init();if(tab=='sRep')report()});
+setInterval(function(){$('#clk').textContent=now()},1000);$('#clk').textContent=now();
+init();setInterval(step,90);setInterval(mutate,2600);setInterval(trend,3000);
+})();
+</script>
+</body>
+</html>
