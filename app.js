@@ -265,7 +265,7 @@ Object.keys(innovationDemoSteps).forEach(id=>{
 });
 
 
-const monitorConfigs=[{"id":"mag","unit":"mm","metric":"Deviasi jarak sengkang","base":3.1,"limit":5},{"id":"form","unit":"jam","metric":"Durasi siklus zona","base":21.4,"limit":24},{"id":"excavate","unit":"mm","metric":"Deformasi dinding","base":7.2,"limit":10},{"id":"pour","unit":"menit","metric":"Waktu tunggu truk","base":13.2,"limit":20}];
+const monitorConfigs=[{"id":"mag","unit":"mm","metric":"Deviasi jarak sengkang","base":3.1,"limit":5},{"id":"form","unit":"jam","metric":"Durasi siklus zona","base":21.4,"limit":24},{"id":"excavate","unit":"mm","metric":"Deformasi dinding","base":7.2,"limit":10}];
 const monitorSamples={};let sampleTick=0;
 function addMonitorSample(config){
  const id=config.id;const rows=monitorSamples[id]||[];
@@ -302,16 +302,16 @@ setInterval(()=>{if(document.hidden)return;monitorConfigs.forEach(config=>addMon
 
 
 /* Digital twin K3 — synthetic demo, never physical CCTV or real AI inference. */
-const ppeZones=["Persiapan","Pondasi","Galian","Struktur Bawah","Lantai 1","Lantai 2","Lantai 3","Lantai 4","Lantai 5","Lantai 6","Fasad","Pengecoran"];
+const ppeZones=Array.from({length:12},(_,i)=>"Zona "+String.fromCharCode(65+i));
 const ppeIssues=["Helm","Rompi","Sepatu safety","Sarung tangan"];
 const ppeGrid=document.getElementById("ppeCameraGrid"),ppeFilter=document.getElementById("ppeZoneFilter");
-let ppeWorkers=[],ppeRunning=true,ppeCycle=0,ppeEvents=[],ppeLastIssues=new Map();
+let ppeWorkers=[],ppeRunning=true,ppeCycle=0,ppeEvents=[],ppeLastIssues=new Map(),ppeNextId=1,ppeRandomSeed=(Date.now()>>>0);\nfunction ppeRandom(){ppeRandomSeed=(Math.imul(1664525,ppeRandomSeed)+1013904223)>>>0;return ppeRandomSeed/4294967296;}\nconst ppeInt=(lo,hi)=>lo+Math.floor(ppeRandom()*(hi-lo+1));
 const ppeTime=()=>new Date().toLocaleTimeString("id-ID");
 const ppeZoneName=z=>"Zona "+String.fromCharCode(65+z);
 const ppeWorkerName=w=>"P"+String(w.id).padStart(3,"0");
-function ppeCreateWorker(id){
- const zone=Math.floor((id-1)/8),slot=(id-1)%8;
- return {id,zone,x:6+(slot%4)*23+Math.random()*5,depth:slot<4?0:1,dir:slot%2?1:-1,speed:.35+Math.random()*.7,phase:Math.random()*6.28,issue:(id%17===0||id%23===0)?ppeIssues[id%4]:null};
+function ppeCreateWorker(zone,slot){
+ const id=ppeNextId++;
+ return {id,zone,x:6+(slot%5)*18+ppeRandom()*5,depth:slot%2,dir:ppeRandom()<.5?-1:1,speed:.22+ppeRandom()*.9,phase:ppeRandom()*6.28,issue:ppeRandom()<.14?ppeIssues[ppeInt(0,3)]:null};
 }
 function ppeRecord(w){
  const key=w.id,old=ppeLastIssues.get(key)||null;
@@ -358,25 +358,96 @@ function ppeMove(){
   const el=document.getElementById("ppe-worker-"+w.id);
   if(el){el.style.left=w.x+"%";el.style.transform="scale("+(w.depth?1:.78)+") translateY("+Math.abs(Math.sin(ppeCycle*.85+w.phase))*-2+"px)";el.querySelector("svg").style.transform="scaleX("+w.dir+")";}
  });
+ if(ppeCycle%55===0){ppeRebalance();ppeBuild();}
  if(ppeCycle%10===0){
-  const w=ppeWorkers[(ppeCycle*7)%ppeWorkers.length];
-  w.issue=w.issue?null:ppeIssues[(ppeCycle/10)%4];
+  const w=ppeWorkers[ppeInt(0,ppeWorkers.length-1)];
+  w.issue=w.issue?null:ppeIssues[ppeInt(0,3)];
   ppeRecord(w);
   const el=document.getElementById("ppe-worker-"+w.id);
   if(el){el.classList.toggle("bad",!!w.issue);const issue=el.querySelector(".ppe-issue");if(issue)issue.remove();if(w.issue)el.insertAdjacentHTML("beforeend",'<span class="ppe-issue">Tanpa '+w.issue+'</span>');}
   ppeStats();
  }
 }
+function ppeRebalance(){
+ for(let z=0;z<ppeZones.length;z++){
+  const members=ppeWorkers.filter(w=>w.zone===z),delta=ppeInt(-2,2),target=Math.max(2,Math.min(16,members.length+delta));
+  if(target>members.length){for(let n=members.length;n<target;n++){const w=ppeCreateWorker(z,n);ppeWorkers.push(w);ppeRecord(w);}}
+  else if(target<members.length){const removed=members.slice(target);const ids=new Set(removed.map(w=>w.id));ppeWorkers=ppeWorkers.filter(w=>!ids.has(w.id));removed.forEach(w=>ppeLastIssues.delete(w.id));}
+ }
+}
 if(ppeGrid&&ppeFilter){
- ppeZones.forEach((name,z)=>ppeFilter.add(new Option(ppeZoneName(z)+" · "+name,String(z))));
- ppeWorkers=Array.from({length:96},(_,i)=>ppeCreateWorker(i+1));
+ ppeZones.forEach((name,z)=>ppeFilter.add(new Option(name,String(z))));
+ ppeWorkers=ppeZones.flatMap((_,z)=>Array.from({length:ppeInt(3,13)},(_,slot)=>ppeCreateWorker(z,slot)));
  ppeWorkers.forEach(ppeRecord);
  ppeBuild();
  ppeFilter.addEventListener("change",ppeFilterApply);
  document.getElementById("ppeAnimate").addEventListener("change",e=>ppeRunning=e.target.checked);
  document.getElementById("ppeRefresh").addEventListener("click",()=>{
-  ppeWorkers.forEach(w=>{if(Math.random()<.15){w.issue=Math.random()<.55?ppeIssues[Math.floor(Math.random()*4)]:null;ppeRecord(w);}});
+  ppeRebalance(); ppeWorkers.forEach(w=>{if(ppeRandom()<.15){w.issue=ppeRandom()<.55?ppeIssues[ppeInt(0,3)]:null;ppeRecord(w);}});
   ppeBuild();
  });
  setInterval(()=>{if(!ppeRunning||document.hidden)return;ppeMove();},180);
+}
+
+
+/* Smart Pour Scheduling: stochastic, synthetic truck arrivals and pump utilization. */
+const pourState={clock:0,capacity:35,queue:[],active:null,arrivals:0,completed:[],events:[],history:[],nextTruck:1};
+const pourRand=(a,b)=>a+Math.random()*(b-a);
+function pourLog(event,detail){
+ pourState.events.unshift({time:new Date().toLocaleTimeString("id-ID"),event,detail});
+ pourState.events= pourState.events.slice(0,100);
+}
+function pourArrive(){
+ const truck={id:"TM-"+String(pourState.nextTruck++).padStart(3,"0"),arrival:pourState.clock,volume:+pourRand(5,9).toFixed(1),remaining:0,status:"Antre"};
+ truck.remaining=truck.volume;
+ pourState.queue.push(truck);pourState.arrivals++;
+ pourLog("Truk terdeteksi",truck.id+" masuk area antre, muatan "+truck.volume+" m³");
+}
+function pourAdvance(){
+ pourState.clock+=1;
+ // Pump performance varies by operating conditions; one tick = 1 virtual minute.
+ pourState.capacity=Math.max(18,Math.min(65,pourState.capacity+pourRand(-8,8)));
+ if(Math.random()<.30)pourArrive();
+ if(!pourState.active&&pourState.queue.length){
+  pourState.active=pourState.queue.shift();pourState.active.wait=pourState.clock-pourState.active.arrival;
+  pourState.active.status="Dipompa";pourLog("Mulai pengecoran",pourState.active.id+" menunggu "+pourState.active.wait+" menit");
+ }
+ if(pourState.active){
+  pourState.active.remaining-=pourState.capacity/60;
+  if(pourState.active.remaining<=0){
+   const truck=pourState.active;truck.status="Selesai";pourState.completed.unshift(truck);
+   pourLog("Truk selesai",truck.id+" selesai dipompa");pourState.active=null;
+  }
+ }
+ const waits=pourState.queue.map(t=>pourState.clock-t.arrival);
+ const avg=waits.length?waits.reduce((a,b)=>a+b,0)/waits.length:0;
+ pourState.history.push({capacity:pourState.capacity,wait:avg,queue:pourState.queue.length});
+ if(pourState.history.length>35)pourState.history.shift();
+ pourRender();
+}
+function pourRender(){
+ const s=pourState;
+ document.getElementById("pourCapacity").textContent=s.capacity.toFixed(1);
+ document.getElementById("pourArrivals").textContent=s.arrivals;
+ document.getElementById("pourQueue").textContent=s.queue.length;
+ const waits=s.queue.map(t=>s.clock-t.arrival);
+ document.getElementById("pourWait").textContent=(waits.length?waits.reduce((a,b)=>a+b,0)/waits.length:0).toFixed(1);
+ const visible=[...(s.active?[s.active]:[]),...s.queue].slice(0,9);
+ document.getElementById("pourTruckScene").innerHTML=visible.map((t,i)=>'<div class="pour-truck" style="left:'+(9+i*10)+'%;top:'+(i%2?54:20)+'%"><span>🚚</span><small>'+t.id+'</small></div>').join("");
+ const det=[...(s.active?[s.active]:[]),...s.queue,...s.completed].slice(0,20);
+ document.getElementById("pourDetections").innerHTML=det.map(t=>'<tr><td>'+new Date().toLocaleTimeString("id-ID")+'</td><td>CAM-POUR</td><td>'+t.id+'</td><td>Truk mixer</td><td>'+(t.wait??(s.clock-t.arrival))+' menit</td><td>'+t.status+'</td></tr>').join("")||'<tr><td colspan="6">Menunggu kendaraan</td></tr>';
+ document.getElementById("pourEvents").innerHTML=s.events.slice(0,25).map(e=>'<tr><td>'+e.time+'</td><td>'+e.event+'</td><td>'+e.detail+'</td></tr>').join("");
+ const canvas=document.getElementById("pourOperationsChart"),ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height,p={l:40,r:40,t:20,b:35},hist=s.history;
+ ctx.clearRect(0,0,w,h);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
+ const maxWait=Math.max(10,...hist.map(d=>d.wait))*1.25;
+ const plot=(key,max,color)=>{ctx.beginPath();hist.forEach((d,i)=>{const x=p.l+(w-p.l-p.r)*(hist.length<2?.5:i/(hist.length-1)),y=p.t+(h-p.t-p.b)*(1-d[key]/max);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.strokeStyle=color;ctx.lineWidth=3;ctx.stroke();};
+ for(let i=0;i<5;i++){const y=p.t+(h-p.t-p.b)*i/4;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.strokeStyle="#e6e6e6";ctx.lineWidth=1;ctx.stroke();}
+ if(hist.length){plot("capacity",70,"#d99500");plot("wait",maxWait,"#bf5252");}
+ ctx.font="12px sans-serif";ctx.fillStyle="#d99500";ctx.fillText("Kapasitas (m³/jam)",p.l,13);ctx.fillStyle="#bf5252";ctx.fillText("Antrean (menit)",w-145,13);
+}
+if(document.getElementById("pourOperationsChart")){
+ const count=8+Math.floor(Math.random()*12);
+ for(let i=0;i<count;i++)pourAdvance();
+ document.getElementById("pourStep").addEventListener("click",()=>{for(let i=0;i<1+Math.floor(Math.random()*4);i++)pourAdvance();});
+ setInterval(()=>{if(document.hidden||!document.getElementById("pourAuto").checked)return;pourAdvance();},4000);
 }
