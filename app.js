@@ -169,9 +169,30 @@ function renderLps(){
  $("lpsPpc").textContent=evaluated.length?Math.round(done/evaluated.length*100)+"%":"—";
  $("lpsTotal").textContent=lpsRecords.length;
  $("lpsConstraints").textContent=lpsRecords.filter(r=>r.constraint&&r.status!=="Selesai").length;
- $("lpsTable").innerHTML=lpsRecords.slice().reverse().map(r=>'<tr><td>Minggu '+r.week+'</td><td>'+esc(r.task)+'</td><td>'+esc(r.owner)+'</td><td>'+esc(r.status)+'</td><td>'+esc(r.constraint||"—")+'</td><td>'+(isGuest?"Viewer":'<button class="btn btn-outline btn-small" data-lps-id="'+esc(r.id)+'" type="button">Ubah status</button>')+'</td></tr>').join("")||'<tr><td colspan="6">Belum ada rencana mingguan.</td></tr>';
+ const weekFilter=$("lpsFilterWeek").value,statusFilter=$("lpsFilterStatus").value;
+ $("lpsTable").innerHTML=lpsRecords.filter(r=>(weekFilter==="all"||String(r.week)===weekFilter)&&(statusFilter==="all"||r.status===statusFilter)).slice().reverse().map(r=>'<tr><td>Minggu '+r.week+'</td><td>'+esc(r.task)+'</td><td>'+esc(r.owner)+'</td><td>'+esc(r.status)+'</td><td>'+esc(r.constraint||"—")+'</td><td>'+(isGuest?"Viewer":'<button class="btn btn-outline btn-small" data-lps-id="'+esc(r.id)+'" type="button">Ubah status</button>')+'</td></tr>').join("")||'<tr><td colspan="6">Belum ada rencana mingguan.</td></tr>';
  $("lpsForm").querySelectorAll("input,select,button").forEach(el=>el.disabled=isGuest);
+ renderLpsExtras();
 }
+const constraintKey="civilweek-constraints-v1";let constraintRecords=[];
+try{const v=JSON.parse(localStorage.getItem(constraintKey)||"[]");if(Array.isArray(v))constraintRecords=v.slice(-200);}catch(e){console.warn("Constraints:",e);}
+function persistConstraints(){try{localStorage.setItem(constraintKey,JSON.stringify(constraintRecords));return true;}catch(e){return false;}}
+function renderLpsExtras(){
+ const weeks=[...new Set(lpsRecords.map(r=>r.week))].sort((a,b)=>a-b);
+ $("lpsWeeklyPpc").innerHTML=weeks.map(week=>{const evaluated=lpsRecords.filter(r=>r.week===week&&r.status!=="Rencana");const done=evaluated.filter(r=>r.status==="Selesai").length;const pct=evaluated.length?Math.round(done/evaluated.length*100):0;return '<div><b>Minggu '+week+'</b> · '+(evaluated.length?pct+"% ("+done+"/"+evaluated.length+")":"Belum dievaluasi")+'<div class="lps-mini-track"><span style="width:'+pct+'%"></span></div></div>';}).join("")||"Belum ada evaluasi mingguan.";
+ const causes=new Map();lpsRecords.filter(r=>r.status==="Belum selesai").forEach(r=>{const key=(r.constraint||"Penyebab belum dicatat").trim();causes.set(key,(causes.get(key)||0)+1);});
+ $("lpsRootCauses").innerHTML=[...causes].sort((a,b)=>b[1]-a[1]).map(([k,n])=>'<div>'+esc(k)+' <b>('+n+')</b></div>').join("")||"Belum ada pekerjaan berstatus belum selesai.";
+ $("constraintTable").innerHTML=constraintRecords.slice().reverse().map(r=>'<tr><td>Minggu '+r.week+'</td><td>'+esc(r.category)+'</td><td>'+esc(r.description)+'<small> · '+esc(r.task)+'</small></td><td>'+esc(r.owner)+'</td><td>'+esc(r.deadline)+'</td><td>'+esc(r.status)+'</td><td>'+(isGuest?"Viewer":'<button class="btn btn-outline btn-small" data-constraint-id="'+esc(r.id)+'" type="button">'+(r.status==="Terbuka"?"Tandai selesai":"Buka kembali")+'</button>')+'</td></tr>').join("")||'<tr><td colspan="7">Belum ada constraint tercatat.</td></tr>';
+ $("constraintForm").querySelectorAll("input,select,button").forEach(el=>el.disabled=isGuest);
+ $("lpsConstraints").textContent=constraintRecords.filter(r=>r.status==="Terbuka").length+lpsRecords.filter(r=>r.constraint&&r.status!=="Selesai").length;
+}
+$("lpsFilterWeek").addEventListener("change",renderLps);$("lpsFilterStatus").addEventListener("change",renderLps);
+$("constraintForm").addEventListener("submit",e=>{e.preventDefault();if(isGuest)return;
+ constraintRecords.push({id:String(Date.now())+"-"+Math.random().toString(36).slice(2,7),created_at:new Date().toISOString(),week:Number($("constraintWeek").value),task:$("constraintTask").value.trim(),category:$("constraintCategory").value,description:$("constraintDescription").value.trim(),owner:$("constraintOwner").value.trim(),deadline:$("constraintDeadline").value,status:"Terbuka"});
+ constraintRecords=constraintRecords.slice(-200);const ok=persistConstraints();renderLps();renderReports();$("constraintForm").reset();$("constraintMessage").textContent=ok?"Constraint berhasil dicatat di browser ini.":"Penyimpanan browser tidak tersedia.";
+});
+$("constraintTable").addEventListener("click",e=>{const b=e.target.closest("[data-constraint-id]");if(!b||isGuest)return;const r=constraintRecords.find(x=>x.id===b.dataset.constraintId);if(!r)return;r.status=r.status==="Terbuka"?"Selesai":"Terbuka";r.created_at=new Date().toISOString();persistConstraints();renderLps();renderReports();});
+function constraintReportEntries(){return constraintRecords.map(r=>({id:"constraint-"+r.id,created_at:r.created_at,reporter_name:r.owner,report_type:"Constraint · Look-Ahead",location:"Minggu "+r.week,status:r.status,priority:"Menengah",description:r.category+" · "+r.task+" · "+r.description+" · Target: "+r.deadline}));}
 function persistLps(){try{localStorage.setItem(lpsKey,JSON.stringify(lpsRecords));return true;}catch(e){return false;}}
 $("lpsForm")?.addEventListener("submit",e=>{
  e.preventDefault();if(isGuest)return;
@@ -202,7 +223,7 @@ function innovationReports(){
  return entries;
 }
 function allVisibleReports(){
- return [...virtualK3Reports,...innovationReports(),...lpsReportEntries(),...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ return [...virtualK3Reports,...innovationReports(),...lpsReportEntries(),...constraintReportEntries(),...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
 }
 function renderReports(){
  if(isGuest)return;const allReports=allVisibleReports();
