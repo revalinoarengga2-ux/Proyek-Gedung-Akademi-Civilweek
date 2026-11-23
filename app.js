@@ -270,11 +270,25 @@ Object.keys(innovationDemoSteps).forEach(id=>{
 
 const monitorConfigs=[{"id":"mag","unit":"mm","metric":"Deviasi jarak sengkang","base":3.1,"limit":5},{"id":"form","unit":"jam","metric":"Durasi siklus zona","base":21.4,"limit":24},{"id":"excavate","unit":"mm","metric":"Deformasi dinding","base":7.2,"limit":10}];
 const monitorSamples={};let sampleTick=0;
+function monitorSecondary(id){
+ const rand=(a,b)=>+(a+Math.random()*(b-a)).toFixed(1);
+ if(id==="mag")return {cover:rand(27,43),magnet:rand(110,260),sensors:Math.floor(4+Math.random()*5)};
+ if(id==="form")return {ready:Math.floor(4+Math.random()*11),reuse:Math.floor(1+Math.random()*9),crew:Math.floor(2+Math.random()*5)};
+ return {settlement:rand(1.5,13.5),water:rand(.8,4.2),sensors:Math.floor(4+Math.random()*7)};
+}
+function monitorExtra(config,rows){
+ const id=config.id,latest=rows.at(-1),v=latest.extra;
+ const bindings=id==="mag"?[["magCover",v.cover],["magMagnet",v.magnet],["magSensors",v.sensors]]:id==="form"?[["formReady",v.ready],["formReuse",v.reuse],["formCrew",v.crew]]:[["excSettlement",v.settlement],["excWater",v.water],["excSensors",v.sensors]];
+ bindings.forEach(([key,val])=>{const el=$(key);if(el)el.textContent=val;});
+ const descriptions=id==="mag"?r=>[["Sensor jarak sengkang",r.value.toFixed(1)+" mm",r.value>5?"Waspada":"Normal"],["Sensor selimut beton",r.extra.cover+" mm","Terpantau"],["Sensor jig magnetik",r.extra.magnet+" N","Terpantau"]]:id==="form"?r=>[["Siklus bekisting",r.value.toFixed(1)+" jam",r.value>24?"Waspada":"Normal"],["Kesiapan modul",r.extra.ready+" modul","Terpantau"],["Pemakaian ulang",r.extra.reuse+" kali","Terpantau"]]:r=>[["Sensor deformasi",r.value.toFixed(1)+" mm",r.value>10?"Waspada":"Normal"],["Sensor penurunan",r.extra.settlement+" mm",r.extra.settlement>10?"Waspada":"Normal"],["Piezometer virtual",r.extra.water+" m","Terpantau"]];
+ const el=$("sensorLog-"+id);
+ if(el)el.innerHTML=rows.slice(-7).reverse().flatMap(r=>descriptions(r).map(d=>'<tr><td>'+r.time.toLocaleTimeString("id-ID")+'</td><td>'+d[0]+'</td><td>'+d[1]+'</td><td>'+d[2]+'</td></tr>')).join("");
+}
 function addMonitorSample(config){
  const id=config.id;const rows=monitorSamples[id]||[];
  const index=rows.length;
- const value=+(config.base+Math.sin(index*1.37+config.base)*config.base*.21+Math.cos(index*.47)*config.base*.07).toFixed(1);
- rows.push({time:new Date(),value});if(rows.length>24)rows.shift();monitorSamples[id]=rows;
+ const value=+(config.base*(.58+Math.random()*.85)+(Math.random()-.5)*config.base*.18).toFixed(1);
+ rows.push({time:new Date(),value,extra:monitorSecondary(id)});if(rows.length>24)rows.shift();monitorSamples[id]=rows;
  renderMonitor(config);
 }
 function renderMonitor(config){
@@ -283,7 +297,7 @@ function renderMonitor(config){
  $("live-"+config.id).textContent=latest.value.toLocaleString("id-ID");
  $("state-"+config.id).textContent=pass?"Normal":"Waspada";
  $("state-"+config.id).style.color=pass?"#247d4c":"#b45309";
- $("count-"+config.id).textContent=rows.length;
+ $("count-"+config.id).textContent=rows.length;monitorExtra(config,rows);
  $("history-"+config.id).innerHTML=rows.slice(-8).reverse().map(r=>'<tr><td>'+r.time.toLocaleTimeString("id-ID")+'</td><td>'+r.value.toFixed(1)+' '+config.unit+'</td><td>'+config.limit+' '+config.unit+'</td><td>'+(r.value<=config.limit?"Normal":"Waspada")+'</td></tr>').join("");
  const canvas=$("chart-"+config.id),ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height,p={l:42,r:18,t:20,b:32};
  ctx.clearRect(0,0,w,h);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
