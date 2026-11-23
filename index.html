@@ -194,12 +194,12 @@ tr:hover td{background:#fffaf0}
           <article class="panel chart-panel"><div class="panel-title"><h3>Grafik Kurva S · 33 Minggu</h3><div class="legend"><span><i class="dot plan"></i>Rencana</span><span><i class="dot actual"></i>Realisasi</span></div></div><canvas id="mainCurve" height="300"></canvas></article>
           <div class="grid-two align-start">
             <article class="panel">
-              <h3>Input Realisasi Pekerjaan</h3>
+              <h3>Input Realisasi Kumulatif Proyek</h3>
               <form id="progressForm" class="stack">
-                <label>Pekerjaan<select id="progressWork" required><option value="">Pilih pekerjaan</option></select></label>
+                <label>Pilih Periode<select id="progressPeriod" required><option value="">Pilih minggu</option><option value="2026-CW01">Minggu 1</option><option value="2026-CW02">Minggu 2</option><option value="2026-CW03">Minggu 3</option><option value="2026-CW04">Minggu 4</option><option value="2026-CW05">Minggu 5</option><option value="2026-CW06">Minggu 6</option><option value="2026-CW07">Minggu 7</option><option value="2026-CW08">Minggu 8</option><option value="2026-CW09">Minggu 9</option><option value="2026-CW10">Minggu 10</option><option value="2026-CW11">Minggu 11</option><option value="2026-CW12">Minggu 12</option><option value="2026-CW13">Minggu 13</option><option value="2026-CW14">Minggu 14</option><option value="2026-CW15">Minggu 15</option><option value="2026-CW16">Minggu 16</option><option value="2026-CW17">Minggu 17</option><option value="2026-CW18">Minggu 18</option><option value="2026-CW19">Minggu 19</option><option value="2026-CW20">Minggu 20</option><option value="2026-CW21">Minggu 21</option><option value="2026-CW22">Minggu 22</option><option value="2026-CW23">Minggu 23</option><option value="2026-CW24">Minggu 24</option><option value="2026-CW25">Minggu 25</option><option value="2026-CW26">Minggu 26</option><option value="2026-CW27">Minggu 27</option><option value="2026-CW28">Minggu 28</option><option value="2026-CW29">Minggu 29</option><option value="2026-CW30">Minggu 30</option><option value="2026-CW31">Minggu 31</option><option value="2026-CW32">Minggu 32</option><option value="2026-CW33">Minggu 33</option></select></label>
                 <div class="form-grid">
-                  <label>Periode / minggu<input id="progressPeriod" type="text" placeholder="Contoh: 2026-W48" required></label>
-                  <label>Progres aktual pekerjaan (%)<input id="progressPercent" type="number" min="0" max="100" step="0.01" required placeholder="0–100"></label>
+                  
+                  <label>Realisasi kumulatif proyek (%)<input id="progressPercent" type="number" min="0" max="100" step="0.01" required placeholder="0–100"></label>
                 </div>
                 <label>Catatan pengawas<textarea id="progressNote" rows="2"></textarea></label>
                 <button class="btn btn-primary" type="submit">Simpan Realisasi</button>
