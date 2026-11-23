@@ -189,7 +189,7 @@ $("guestLoginBtn").addEventListener("click",()=>{
  isGuest=true;currentUser=null;profile=null;members=[];reports=[];weeklyProgress=[];progressRows=[];
  workItems=defaultWork.map(([name,category,weight_percent],i)=>({id:"demo-"+i,name,category,weight_percent}));
  $("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
- $("guestBanner").classList.remove("hidden");$("userName").textContent="Guest";$("userRole").textContent="Viewer · Demo";$("userInitial").textContent="G";
+ $("guestBanner").classList.remove("hidden");$("formManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("pourManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("userName").textContent="Guest";$("userRole").textContent="Viewer · Demo";$("userInitial").textContent="G";
  document.querySelector('[data-page="reports"]').classList.add("hidden");
  $("addWorkBtn").classList.add("hidden");$("progressForm").closest("article").classList.add("hidden");
  $("refreshBtn").textContent="↻ Perbarui Tampilan";
@@ -303,7 +303,7 @@ Object.keys(innovationDemoSteps).forEach(id=>{
 });
 
 
-const monitorConfigs=[{"id":"mag","unit":"mm","metric":"Deviasi jarak sengkang","base":3.1,"limit":5},{"id":"form","unit":"jam","metric":"Durasi siklus zona","base":21.4,"limit":24},{"id":"excavate","unit":"mm","metric":"Deformasi dinding","base":7.2,"limit":10}];
+const monitorConfigs=[{"id":"mag","unit":"mm","metric":"Deviasi jarak sengkang","base":3.1,"limit":5},{"id":"excavate","unit":"mm","metric":"Deformasi dinding","base":7.2,"limit":10}];
 const monitorSamples={};let sampleTick=0;
 function monitorSecondary(id){
  const rand=(a,b)=>+(a+Math.random()*(b-a)).toFixed(1);
@@ -332,7 +332,7 @@ function renderMonitor(config){
  $("live-"+config.id).textContent=latest.value.toLocaleString("id-ID");
  $("state-"+config.id).textContent=pass?"Normal":"Waspada";
  $("state-"+config.id).style.color=pass?"#247d4c":"#b45309";
- $("count-"+config.id).textContent=rows.length;monitorExtra(config,rows);
+ $("count-"+config.id).textContent=rows.length;monitorExtra(config,rows);setInnovationOverview(config.id,latest.value.toFixed(1)+" "+config.unit+(pass?" · Normal":" · Waspada"));
  $("history-"+config.id).innerHTML=rows.slice(-8).reverse().map(r=>'<tr><td>'+r.time.toLocaleTimeString("id-ID")+'</td><td>'+r.value.toFixed(1)+' '+config.unit+'</td><td>'+config.limit+' '+config.unit+'</td><td>'+(r.value<=config.limit?"Normal":"Waspada")+'</td></tr>').join("");
  const canvas=$("chart-"+config.id),ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height,p={l:42,r:18,t:20,b:32};
  ctx.clearRect(0,0,w,h);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
@@ -450,64 +450,46 @@ if(ppeGrid&&ppeFilter){
 }
 
 
-/* Smart Pour Scheduling: stochastic, synthetic truck arrivals and pump utilization. */
-const pourState={clock:0,capacity:35,queue:[],active:null,arrivals:0,completed:[],events:[],history:[],nextTruck:1};
-const pourRand=(a,b)=>a+Math.random()*(b-a);
-function pourLog(event,detail){
- pourState.events.unshift({time:new Date().toLocaleTimeString("id-ID"),event,detail});
- pourState.events= pourState.events.slice(0,100);
+
+/* Manual operational records: local browser storage, no synthetic truck arrivals. */
+const manualStoreKey="civilweek-manual-innovation-v1";
+let manualRecords={form:[],pour:[]};
+try{const saved=JSON.parse(localStorage.getItem(manualStoreKey)||"{}");for(const id of ["form","pour"])if(Array.isArray(saved[id]))manualRecords[id]=saved[id].slice(-60);}catch(e){console.warn("Catatan manual tidak dapat dibaca",e);}
+function persistManual(){try{localStorage.setItem(manualStoreKey,JSON.stringify(manualRecords));return true;}catch(e){console.warn(e);return false;}}
+function setInnovationOverview(id,value){const el=$("overview-"+id);if(el)el.textContent=value;}
+function manualPlot(canvasId,values,limit){
+ const canvas=$(canvasId);if(!canvas)return;const ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height,p={l:42,r:20,t:20,b:32};ctx.clearRect(0,0,w,h);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
+ const max=Math.max(limit*1.3,...values,1);ctx.strokeStyle="#ece5d7";for(let i=0;i<5;i++){const y=p.t+(h-p.t-p.b)*i/4;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();ctx.fillStyle="#777";ctx.font="12px sans-serif";ctx.fillText((max*(1-i/4)).toFixed(1),3,y+4);}
+ if(!values.length){ctx.fillStyle="#777";ctx.fillText("Belum ada catatan manual",w/2-80,h/2);return;}
+ ctx.strokeStyle="#d6a02b";ctx.lineWidth=3;ctx.beginPath();values.forEach((v,i)=>{const x=p.l+(w-p.l-p.r)*(values.length===1?.5:i/(values.length-1)),y=p.t+(h-p.t-p.b)*(1-v/max);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
 }
-function pourArrive(){
- const truck={id:"TM-"+String(pourState.nextTruck++).padStart(3,"0"),arrival:pourState.clock,volume:+pourRand(5,9).toFixed(1),remaining:0,status:"Antre"};
- truck.remaining=truck.volume;
- pourState.queue.push(truck);pourState.arrivals++;
- pourLog("Truk terdeteksi",truck.id+" masuk area antre, muatan "+truck.volume+" m³");
+function renderFormManual(){
+ const rows=manualRecords.form,latest=rows.at(-1);$("live-form").textContent=latest?latest.hours.toFixed(1):"—";$("state-form").textContent=latest?(latest.hours<=24?"Sesuai target":"Melebihi target"):"Belum diinput";$("count-form").textContent=rows.length;
+ for(const [id,key] of [["formReady","ready"],["formReuse","reuse"],["formCrew","crew"]])$(id).textContent=latest?latest[key]:"—";
+ const log=rows.slice(-8).reverse().map(r=>'<tr><td>'+esc(r.time)+'</td><td>'+esc(r.zone)+'</td><td>'+r.hours.toFixed(1)+' jam</td><td>'+(r.hours<=24?"Sesuai target":"Melebihi target")+'</td></tr>').join("");
+ $("history-form").innerHTML=log||'<tr><td colspan="4">Belum ada input manual</td></tr>';
+ $("sensorLog-form").innerHTML=rows.slice(-7).reverse().map(r=>'<tr><td>'+esc(r.time)+'</td><td>'+esc(r.zone)+'</td><td>'+r.ready+' modul · '+r.crew+' regu</td><td>'+esc(r.note||"Tercatat")+'</td></tr>').join("")||'<tr><td colspan="4">Belum ada input</td></tr>';
+ manualPlot("chart-form",rows.map(r=>r.hours),24);setInnovationOverview("form",latest?latest.hours.toFixed(1)+" jam · "+latest.zone:"Belum ada input");
 }
-function pourAdvance(){
- pourState.clock+=1;
- // Pump performance varies by operating conditions; one tick = 1 virtual minute.
- pourState.capacity=Math.max(18,Math.min(65,pourState.capacity+pourRand(-8,8)));
- if(Math.random()<.30)pourArrive();
- if(!pourState.active&&pourState.queue.length){
-  pourState.active=pourState.queue.shift();pourState.active.wait=pourState.clock-pourState.active.arrival;
-  pourState.active.status="Dipompa";pourLog("Mulai pengecoran",pourState.active.id+" menunggu "+pourState.active.wait+" menit");
- }
- if(pourState.active){
-  pourState.active.remaining-=pourState.capacity/60;
-  if(pourState.active.remaining<=0){
-   const truck=pourState.active;truck.status="Selesai";pourState.completed.unshift(truck);
-   pourLog("Truk selesai",truck.id+" selesai dipompa");pourState.active=null;
-  }
- }
- const waits=pourState.queue.map(t=>pourState.clock-t.arrival);
- const avg=waits.length?waits.reduce((a,b)=>a+b,0)/waits.length:0;
- pourState.history.push({capacity:pourState.capacity,wait:avg,queue:pourState.queue.length});
- if(pourState.history.length>35)pourState.history.shift();
- pourRender();
+function renderPourManual(){
+ const rows=manualRecords.pour,latest=rows.at(-1);
+ for(const [id,key] of [["pourCapacity","capacity"],["pourArrivals","arrivals"],["pourQueue","queue"],["pourWait","wait"]])$(id).textContent=latest?latest[key]:"—";
+ $("pourDetections").innerHTML=rows.slice(-15).reverse().map(r=>'<tr><td>'+esc(r.time)+'</td><td>Input manual</td><td>'+r.arrivals+' truk</td><td>'+esc(r.zone)+'</td><td>'+r.wait+' menit</td><td>'+r.queue+' antre</td></tr>').join("")||'<tr><td colspan="6">Belum ada input</td></tr>';
+ $("pourEvents").innerHTML=rows.slice(-20).reverse().map(r=>'<tr><td>'+esc(r.time)+'</td><td>Catatan pengecoran</td><td>'+esc(r.zone+' · '+(r.note||"Input manual"))+'</td></tr>').join("")||'<tr><td colspan="3">Belum ada input</td></tr>';
+ manualPlot("pourOperationsChart",rows.map(r=>r.capacity),60);
+ setInnovationOverview("pour",latest?latest.queue+" truk antre · "+latest.capacity+" m³/jam":"Belum ada input");
 }
-function pourRender(){
- const s=pourState;
- document.getElementById("pourCapacity").textContent=s.capacity.toFixed(1);
- document.getElementById("pourArrivals").textContent=s.arrivals;
- document.getElementById("pourQueue").textContent=s.queue.length;
- const waits=s.queue.map(t=>s.clock-t.arrival);
- document.getElementById("pourWait").textContent=(waits.length?waits.reduce((a,b)=>a+b,0)/waits.length:0).toFixed(1);
- const visible=[...(s.active?[s.active]:[]),...s.queue].slice(0,9);
- document.getElementById("pourTruckScene").innerHTML=visible.map((t,i)=>'<div class="pour-truck" style="left:'+(9+i*10)+'%;top:'+(i%2?54:20)+'%"><span>🚚</span><small>'+t.id+'</small></div>').join("");
- const det=[...(s.active?[s.active]:[]),...s.queue,...s.completed].slice(0,20);
- document.getElementById("pourDetections").innerHTML=det.map(t=>'<tr><td>'+new Date().toLocaleTimeString("id-ID")+'</td><td>CAM-POUR</td><td>'+t.id+'</td><td>Truk mixer</td><td>'+(t.wait??(s.clock-t.arrival))+' menit</td><td>'+t.status+'</td></tr>').join("")||'<tr><td colspan="6">Menunggu kendaraan</td></tr>';
- document.getElementById("pourEvents").innerHTML=s.events.slice(0,25).map(e=>'<tr><td>'+e.time+'</td><td>'+e.event+'</td><td>'+e.detail+'</td></tr>').join("");
- const canvas=document.getElementById("pourOperationsChart"),ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height,p={l:40,r:40,t:20,b:35},hist=s.history;
- ctx.clearRect(0,0,w,h);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
- const maxWait=Math.max(10,...hist.map(d=>d.wait))*1.25;
- const plot=(key,max,color)=>{ctx.beginPath();hist.forEach((d,i)=>{const x=p.l+(w-p.l-p.r)*(hist.length<2?.5:i/(hist.length-1)),y=p.t+(h-p.t-p.b)*(1-d[key]/max);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.strokeStyle=color;ctx.lineWidth=3;ctx.stroke();};
- for(let i=0;i<5;i++){const y=p.t+(h-p.t-p.b)*i/4;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.strokeStyle="#e6e6e6";ctx.lineWidth=1;ctx.stroke();}
- if(hist.length){plot("capacity",70,"#d99500");plot("wait",maxWait,"#bf5252");}
- ctx.font="12px sans-serif";ctx.fillStyle="#d99500";ctx.fillText("Kapasitas (m³/jam)",p.l,13);ctx.fillStyle="#bf5252";ctx.fillText("Antrean (menit)",w-145,13);
-}
-if(document.getElementById("pourOperationsChart")){
- const count=8+Math.floor(Math.random()*12);
- for(let i=0;i<count;i++)pourAdvance();
- document.getElementById("pourStep").addEventListener("click",()=>{for(let i=0;i<1+Math.floor(Math.random()*4);i++)pourAdvance();});
- setInterval(()=>{if(document.hidden||!document.getElementById("pourAuto").checked)return;pourAdvance();},4000);
-}
+function manualValues(ids){return ids.map(id=>{const n=Number($(id).value);if(!$(id).value.trim()||!Number.isFinite(n)||n<0)throw Error("Lengkapi seluruh angka dengan nilai positif atau nol.");return n;});}
+$("formManualInput")?.addEventListener("submit",e=>{
+ e.preventDefault();if(isGuest){$("formManualMessage").textContent="Guest hanya dapat melihat, tidak bisa menginput.";return;}
+ try{const [hours,ready,reuse,crew]=manualValues(["formHoursInput","formReadyInput","formReuseInput","formCrewInput"]);if([ready,reuse,crew].some(n=>!Number.isInteger(n)))throw Error("Jumlah modul, reuse, dan regu harus bilangan bulat.");
+ manualRecords.form.push({time:new Date().toLocaleString("id-ID"),zone:$("formZone").value,hours,ready,reuse,crew,note:$("formNoteInput").value});manualRecords.form=manualRecords.form.slice(-60);const saved=persistManual();renderFormManual();$("formManualInput").reset();$("formManualMessage").textContent=saved?"Tersimpan pada browser ini.":"Catatan hanya tersimpan selama sesi (penyimpanan browser tidak tersedia).";}catch(err){$("formManualMessage").textContent=err.message;}
+});
+$("pourManualInput")?.addEventListener("submit",e=>{
+ e.preventDefault();if(isGuest){$("pourManualMessage").textContent="Guest hanya dapat melihat, tidak bisa menginput.";return;}
+ try{const [capacity,arrivals,queue,wait]=manualValues(["pourCapacityInput","pourArrivalsInput","pourQueueInput","pourWaitInput"]);if(!Number.isInteger(arrivals)||!Number.isInteger(queue)||queue>arrivals)throw Error("Jumlah truk harus bulat dan antrean tidak boleh melebihi kedatangan.");
+ manualRecords.pour.push({time:new Date().toLocaleString("id-ID"),capacity,arrivals,queue,wait,zone:$("pourZoneInput").value,note:$("pourNoteInput").value});manualRecords.pour=manualRecords.pour.slice(-60);const saved=persistManual();renderPourManual();$("pourManualInput").reset();$("pourManualMessage").textContent=saved?"Tersimpan pada browser ini.":"Catatan hanya tersimpan selama sesi (penyimpanan browser tidak tersedia).";}catch(err){$("pourManualMessage").textContent=err.message;}
+});
+document.querySelectorAll("[data-open-innovation]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.openInnovation)));
+renderFormManual();renderPourManual();
+setInnovationOverview("cctv","Deteksi APD virtual");
