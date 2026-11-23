@@ -183,7 +183,7 @@ function renderLps(){
  const weekFilter=$("lpsFilterWeek").value,statusFilter=$("lpsFilterStatus").value;
  $("lpsTable").innerHTML=lpsRecords.filter(r=>(weekFilter==="all"||String(r.week)===weekFilter)&&(statusFilter==="all"||r.status===statusFilter)).slice().reverse().map(r=>'<tr><td>Minggu '+r.week+'</td><td>'+esc(r.task)+'</td><td>'+esc(r.owner)+'</td><td>'+esc(r.status)+'</td><td>'+esc(r.constraint||"—")+'</td><td>'+(isGuest?"Viewer":'<button class="btn btn-outline btn-small" data-lps-id="'+esc(r.id)+'" type="button">Ubah status</button>')+'</td></tr>').join("")||'<tr><td colspan="6">Belum ada rencana mingguan.</td></tr>';
  $("lpsForm").querySelectorAll("input,select,button").forEach(el=>el.disabled=isGuest);
- renderLpsExtras();
+ renderLpsExtras();renderOwnerOverview();
 }
 const constraintKey="civilweek-constraints-v1";let constraintRecords=[];
 try{const v=JSON.parse(localStorage.getItem(constraintKey)||"[]");if(Array.isArray(v))constraintRecords=v.slice(-200);}catch(e){console.warn("Constraints:",e);}
@@ -274,7 +274,7 @@ function renderReports(){
  $("statOpen").textContent=allReports.filter(r=>!["Selesai","Ditutup","Catatan operasional"].includes(r.status)&&!String(r.status||"").startsWith("Simulasi")).length;
  $("reportsTable").innerHTML=allReports.length?allReports.map(r=>`<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.reporter_name)}</td><td>${esc(r.report_type)}</td><td>${esc(r.location)}</td><td><span class="pill ${r.status==="Selesai"?"success":"warn"}">${esc(r.status||"Baru")}</span></td></tr>`).join(""):`<tr><td colspan="5" class="empty">Belum ada laporan.</td></tr>`;
  $("recentList").innerHTML=allReports.slice(0,6).map(r=>`<div class="activity"><span class="activity-dot"></span><div><b>${esc(r.report_type)} · ${esc(r.location)}</b><small>${esc(r.reporter_name)} · ${fmtDate(r.created_at)}</small><p>${esc(r.description||"").slice(0,110)}</p></div></div>`).join("")||'<div class="empty">Belum ada laporan.</div>';
- $("lastUpdated").textContent="Diperbarui "+new Date().toLocaleTimeString("id-ID");
+ $("lastUpdated").textContent="Diperbarui "+new Date().toLocaleTimeString("id-ID");renderOwnerOverview();
 }
 function latestActual(workId){const rows=progressRows.filter(p=>p.work_item_id===workId).sort((a,b)=>a.period.localeCompare(b.period)||a.created_at.localeCompare(b.created_at));return rows.length?Number(rows[rows.length-1].actual_percent):0;}
 function weightedActual(){return workItems.reduce((s,w)=>s+Number(w.weight_percent||0)*latestActual(w.id)/100,0);}
@@ -282,11 +282,40 @@ const schedule33=[0.20,2.96,7.14,10.37,12.68,16.14,18.37,20.0,22.0,24.01,27.0,31
 const baselinePeriod33=i=>"2026-CW"+String(i+1).padStart(2,"0");
 const activeBaseline=()=>schedule33.map((v,i)=>({period:baselinePeriod33(i),planned_cumulative:v}));
 function planValue(){const rows=activeBaseline();return Number(rows[rows.length-1]?.planned_cumulative||0);}
+function latestScheduleSnapshot(){
+ const baseline=activeBaseline(),planMap=new Map(baseline.map(x=>[x.period,Number(x.planned_cumulative)]));
+ const valid=weeklyProgress.filter(r=>planMap.has(r.period)&&Number.isFinite(Number(r.actual_cumulative))).slice().sort((a,b)=>a.period.localeCompare(b.period));
+ const latest=valid.at(-1);if(!latest)return null;
+ const week=baseline.findIndex(r=>r.period===latest.period)+1;
+ const actual=Number(latest.actual_cumulative),planned=planMap.get(latest.period);
+ return {week,actual,planned,deviation:actual-planned};
+}
+function renderOwnerOverview(){
+ const x=latestScheduleSnapshot(),reportsCount=reports.length;
+ $("ownerDataStatus").textContent=x?"DATA MINGGU "+x.week:"BELUM ADA REALISASI";
+ $("ownerActual").textContent=x?fmtPct(x.actual):"—";
+ $("ownerPlanned").textContent=x?fmtPct(x.planned):"—";
+ $("ownerDeviation").textContent=x?(x.deviation>=0?"+":"")+x.deviation.toFixed(2)+" poin":"—";
+ $("ownerWeek").textContent=x?"Evaluasi minggu "+x.week+" dari 33":"Belum ada periode evaluasi";
+ $("ownerProgressNote").textContent=x?"Berdasarkan input kumulatif":"Belum ada laporan mingguan";
+ $("ownerProgressBar").style.width=x?Math.max(0,Math.min(100,x.actual))+"%":"0%";
+ $("ownerProgressCaption").textContent=x?"Realisasi fisik terlapor "+fmtPct(x.actual):"Belum ada progres fisik terlapor";
+ const status=!x?"Belum tersedia":x.deviation<-.005?"Di bawah rencana":x.deviation>.005?"Di atas rencana":"Sesuai rencana";
+ $("ownerSchedule").textContent=status;
+ $("ownerScheduleHint").textContent=x?"Dibandingkan dengan minggu "+x.week:"Memerlukan realisasi mingguan";
+ $("ownerConclusion").textContent=!x?"Belum tersedia laporan realisasi kumulatif. Status jadwal proyek belum bisa dinilai.":x.deviation<-.005?"Pada minggu "+x.week+", realisasi "+fmtPct(x.actual)+" tertinggal "+Math.abs(x.deviation).toFixed(2)+" poin dari rencana "+fmtPct(x.planned)+". Perlu pembahasan pemulihan jadwal.":x.deviation>.005?"Pada minggu "+x.week+", realisasi "+fmtPct(x.actual)+" lebih tinggi "+x.deviation.toFixed(2)+" poin dari rencana "+fmtPct(x.planned)+". Pastikan mutu dan keselamatan tetap terkendali.":"Pada minggu "+x.week+", realisasi "+fmtPct(x.actual)+" sesuai rencana "+fmtPct(x.planned)+". Lanjutkan pengawasan pekerjaan berikutnya.";
+ const openConstraints=constraintRecords.filter(r=>r.status!=="Selesai").length;
+ const openLps=lpsRecords.filter(r=>r.status==="Belum selesai").length;
+ const pending=reports.filter(r=>!["Selesai","Ditutup"].includes(r.status)).length;
+ $("ownerActions").textContent=(x&&x.deviation<-.005?"Prioritaskan penyebab keterlambatan dan susun rencana pemulihan. ":"")+(openConstraints?openConstraints+" kendala lokal belum ditutup. ":"")+(openLps?openLps+" komitmen kerja mingguan belum selesai. ":"")+(pending?pending+" laporan resmi masih memerlukan tindak lanjut. ":"")+(openConstraints+openLps+pending===0?"Belum ada kendala aktif yang tercatat dalam data yang tersedia. Tetap lakukan verifikasi lapangan.":"");
+ $("ownerLocalNote").textContent="Laporan resmi yang dimuat: "+reportsCount+". LPS dan constraint tersimpan lokal di browser ini; data virtual bukan kejadian lapangan.";
+}
 function updateStats(){
- const wt=workItems.reduce((s,w)=>s+Number(w.weight_percent||0),0);
- const a=weeklyProgress.length?Number(weeklyProgress[weeklyProgress.length-1].actual_cumulative):0,p=planValue();
- $("statPlan").textContent=fmtPct(p);$("statActual").textContent=fmtPct(a);
- $("curvePlan").textContent=fmtPct(p);$("curveActual").textContent=fmtPct(a);$("curveDeviation").textContent=(a-p>=0?"+":"")+fmtPct(a-p);
+ const x=latestScheduleSnapshot(),a=x?x.actual:null,p=x?x.planned:null;
+ $("statPlan").textContent=p===null?"—":fmtPct(p);$("statActual").textContent=a===null?"—":fmtPct(a);
+ $("curvePlan").textContent=p===null?"—":fmtPct(p);$("curveActual").textContent=a===null?"—":fmtPct(a);
+ $("curveDeviation").textContent=x?(x.deviation>=0?"+":"")+x.deviation.toFixed(2)+" poin":"—";
+ renderOwnerOverview();
 }
 function renderWorkTable(){ $("workTable").innerHTML=workItems.map(w=>`<tr><td>${esc(w.name)}</td><td>${fmtPct(w.weight_percent)}</td></tr>`).join("")||'<tr><td colspan="2">Belum ada pekerjaan.</td></tr>';updateStats(); }
 function curvePerformance(){
