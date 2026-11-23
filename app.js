@@ -246,3 +246,24 @@ else{
  db.auth.onAuthStateChange((_event,session)=>{if(!session){$("appView").classList.add("hidden");$("loginView").classList.remove("hidden");$("logoutBtn").classList.add("hidden");}});
 }
 window.addEventListener("resize",()=>{if(!$("page-curve").classList.contains("hidden"))drawCurves();if(!$("page-dashboard").classList.contains("hidden"))drawOne("miniCurve");});
+
+
+const innovationDemoSteps={
+mag:["Pasang jig magnetik","Atur posisi sengkang","Periksa jarak dan selimut","Lepas jig sebelum pengecoran"],
+form:["Siapkan Zona 1","Pindahkan regu ke Zona 2","Gunakan modul Zona 3","Periksa syarat bongkar dan reuse"],
+excavate:["Galian tahap 1 dan penahan","Galian tahap 2 dan instrumentasi","Galian tahap 3 dan pengendalian air","Evaluasi batas geoteknik"],
+pour:["Hitung kapasitas pompa dan truk","Atur slot kedatangan T1","Atur slot kedatangan T2","Evaluasi suplai dan potensi antrean"]
+};
+function updateInnovationDemo(id,value){
+ const index=Math.max(0,Math.min(3,Number(value)||0)),steps=innovationDemoSteps[id];if(!steps)return;
+ const slider=$("slider-"+id);if(slider)slider.value=index;
+ $("metric-"+id).textContent="Tahap "+(index+1)+" / 4";
+ $("step-"+id).textContent=steps[index];
+ for(let i=0;i<3;i++){const check=$("check-"+id+"-"+i);check.textContent=i<index?"✓":"○";check.classList.toggle("done",i<index);}
+ const scene=document.querySelector('[data-innovation="'+id+'"] .scene-object');if(scene)scene.style.transform="translateX("+(index*3)+"%)";
+}
+Object.keys(innovationDemoSteps).forEach(id=>{
+ $("slider-"+id)?.addEventListener("input",e=>updateInnovationDemo(id,e.target.value));
+ document.querySelector('[data-demo-next="'+id+'"]')?.addEventListener("click",()=>updateInnovationDemo(id,(Number($("slider-"+id).value)+1)%4));
+ document.querySelector('[data-demo-reset="'+id+'"]')?.addEventListener("click",()=>updateInnovationDemo(id,0));
+});
