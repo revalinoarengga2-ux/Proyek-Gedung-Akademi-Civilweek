@@ -112,7 +112,7 @@ async function loadBaseline(){drawCurves();}
 async function loadWeeklyProgress(){
  const {data,error}=await db.from("project_weekly_progress").select("period,actual_cumulative,updated_at").order("period");
  if(error){console.warn("Gagal memuat realisasi mingguan",error);return;}
- weeklyProgress=data||[];updateStats();drawCurves();
+ weeklyProgress=data||[];updateStats();drawCurves();renderWeeklyCurveTable();
 }
 function renderReports(){
  const allReports=[...virtualK3Reports,...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
@@ -134,10 +134,8 @@ function updateStats(){
  $("statPlan").textContent=fmtPct(p);$("statActual").textContent=fmtPct(a);
  $("curvePlan").textContent=fmtPct(p);$("curveActual").textContent=fmtPct(a);$("curveDeviation").textContent=(a-p>=0?"+":"")+fmtPct(a-p);
 }
-function renderWorkTable(){
- $("workTable").innerHTML=workItems.map(w=>`<tr><td>${esc(w.name)}</td><td>${fmtPct(w.weight_percent)}</td><td><b>${fmtPct(latestActual(w.id))}</b></td></tr>`).join("")||'<tr><td colspan="3" class="empty">Belum ada daftar pekerjaan.</td></tr>';
- updateStats();
-}
+function renderWorkTable(){ $("workTable").innerHTML=workItems.map(w=>`<tr><td>${esc(w.name)}</td><td>${fmtPct(w.weight_percent)}</td></tr>`).join("")||'<tr><td colspan="2">Belum ada pekerjaan.</td></tr>';updateStats(); }
+function renderWeeklyCurveTable(){const el=$("weeklyCurveTable");if(!el)return;const map=new Map(weeklyProgress.map(r=>[r.period,Number(r.actual_cumulative)]));el.innerHTML=activeBaseline().map((r,i)=>`<tr><td>Minggu ${i+1}</td><td>${fmtPct(r.planned_cumulative)}</td><td><b>${map.has(r.period)?fmtPct(map.get(r.period)):"—"}</b></td></tr>`).join("");}
 function weightedActualAt(period){
  return workItems.reduce((sum,w)=>{
   const rows=progressRows.filter(p=>p.work_item_id===w.id && p.period<=period);
@@ -178,7 +176,7 @@ function drawOne(canvasId){
  periods.forEach((t,i)=>{if(i%step===0||i===periods.length-1){let x=pad.l+(periods.length===1?cw/2:cw*i/(periods.length-1));ctx.save();ctx.translate(x,height-8);ctx.rotate(-.25);ctx.fillStyle="#777";ctx.fillText(t,-12,0);ctx.restore();}});
 }
 function drawCurves(){drawOne("miniCurve");drawOne("mainCurve");}
-async function refreshAll(){await Promise.all([loadMembers(),loadWork(),loadReports(),loadProgress(),loadBaseline(),loadWeeklyProgress()]);updateStats();drawCurves();}
+async function refreshAll(){await Promise.all([loadMembers(),loadWork(),loadReports(),loadProgress(),loadBaseline(),loadWeeklyProgress()]);updateStats();drawCurves();renderWeeklyCurveTable();}
 async function uploadPhoto(file){
  if(!file)return null;
  const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,"_"),path=`${currentUser.id}/${Date.now()}-${safe}`;
