@@ -118,9 +118,9 @@ tr:hover td{background:#fffaf0}
         <section class="page hidden" id="page-curve">
           <div class="section-head"><div><h2>Kurva S Rencana & Realisasi</h2><p class="muted">Input progres per pekerjaan, kemudian pantau deviasi kumulatif proyek.</p></div></div>
           <div class="stats compact">
-            <article class="stat"><span>Bobot total terdaftar</span><b id="weightTotal">0%</b></article>
-            <article class="stat"><span>Rencana kumulatif</span><b id="curvePlan">0%</b></article>
-            <article class="stat"><span>Realisasi kumulatif</span><b id="curveActual">0%</b></article>
+            <article class="stat"><span>Total Bobot Rencana Pekerjaan</span><b id="weightTotal">0%</b></article>
+            <article class="stat"><span>Progres Rencana Kumulatif</span><b id="curvePlan">0%</b></article>
+            <article class="stat"><span>Progres Realisasi Kumulatif</span><b id="curveActual">0%</b></article>
             <article class="stat"><span>Deviasi</span><b id="curveDeviation">0%</b></article>
           </div>
           <article class="panel chart-panel"><div class="panel-title"><h3>Grafik Kurva S</h3><div class="legend"><span><i class="dot plan"></i>Rencana</span><span><i class="dot actual"></i>Realisasi</span></div></div><canvas id="mainCurve" height="300"></canvas></article>
@@ -154,7 +154,7 @@ tr:hover td{background:#fffaf0}
             <article class="panel">
               <div class="panel-title"><h3>Daftar Bobot & Progres</h3><button class="btn btn-outline btn-small" id="addWorkBtn">+ Tambah pekerjaan</button></div>
               <p id="workLoadStatus" class="hint" role="status">Memuat daftar pekerjaan dari Supabase…</p><div class="table-wrap"><table><thead><tr><th>Pekerjaan</th><th>Bobot</th><th>Rencana</th><th>Realisasi</th></tr></thead><tbody id="workTable"></tbody></table></div>
-              <p class="hint">Bobot pekerjaan harus mengikuti RAB / baseline yang disetujui. Total bobot idealnya 100%. Realisasi merupakan persentase penyelesaian masing-masing pekerjaan.</p>
+              <p class="hint">Bobot rencana seluruh pekerjaan berjumlah 100%. Progres rencana kumulatif per minggu memerlukan jadwal pelaksanaan/baseline yang disetujui. Realisasi merupakan persentase penyelesaian masing-masing pekerjaan.</p>
             </article>
           </div>
         </section>
