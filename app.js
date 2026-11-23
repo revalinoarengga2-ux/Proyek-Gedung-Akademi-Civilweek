@@ -233,8 +233,34 @@ function innovationReports(){
  }
  return entries;
 }
+const activityResetKey="civilweek-activity-reset-cutoff-v1";
+let activityResetCutoff=localStorage.getItem(activityResetKey)||"";
+function resetLocalActivity(){
+ if(isGuest)return;
+ if(!confirm("Reset tampilan aktivitas lokal dan catatan inovasi sebelumnya di browser ini? Laporan resmi Supabase tidak akan dihapus."))return;
+ activityResetCutoff=new Date().toISOString();
+ try{localStorage.setItem(activityResetKey,activityResetCutoff);}catch(e){console.warn("Reset lokal tidak dapat dipersistenkan",e);}
+ virtualK3Reports.length=0;try{sessionStorage.removeItem("civilweek-k3-events");}catch(e){}
+ renderReports();
+ alert("Aktivitas lokal sebelumnya disembunyikan dari Ringkasan dan Laporan Terpusat. Laporan Supabase tetap tersimpan.");
+}
+$("resetRecentBtn").addEventListener("click",resetLocalActivity);
+$("resetReportsBtn").addEventListener("click",resetLocalActivity);
+function localAfterReset(rows){return activityResetCutoff?rows.filter(r=>String(r.created_at||"")>activityResetCutoff):rows;}
+function localDateTime(id){
+ const value=$(id).value;
+ if(!value)throw Error("Tanggal dan waktu wajib diisi.");
+ const date=new Date(value);
+ if(!Number.isFinite(date.getTime()))throw Error("Tanggal atau waktu tidak valid.");
+ if(date.getTime()>Date.now()+60000)throw Error("Tanggal dan waktu tidak boleh berada di masa depan.");
+ return date;
+}
+function defaultManualDateTimes(){
+ const now=new Date(),local=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+ for(const id of ["formDateTimeInput","pourDateTimeInput"])if($(id)&&!$(id).value)$(id).value=local;
+}
 function allVisibleReports(){
- return [...virtualK3Reports,...innovationReports(),...lpsReportEntries(),...constraintReportEntries(),...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ return [...localAfterReset(virtualK3Reports),...localAfterReset(innovationReports()),...localAfterReset(lpsReportEntries()),...localAfterReset(constraintReportEntries()),...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
 }
 function renderReports(){
  if(isGuest)return;const allReports=allVisibleReports();
@@ -331,7 +357,7 @@ $("guestLoginBtn").addEventListener("click",()=>{
  $("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
  $("guestBanner").classList.remove("hidden");$("formManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("pourManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("userName").textContent="Guest";$("userRole").textContent="Viewer · Demo";$("userInitial").textContent="G";
  document.querySelector('[data-page="reports"]').classList.add("hidden");
- $("addWorkBtn").classList.add("hidden");$("progressForm").closest("article").classList.add("hidden");
+ $("addWorkBtn").classList.add("hidden");$("resetRecentBtn").disabled=true;$("resetReportsBtn").disabled=true;$("progressForm").closest("article").classList.add("hidden");
  $("refreshBtn").textContent="↻ Perbarui Tampilan";
  renderWorkTable();renderWeeklyCurveTable();updateStats();drawCurves();renderOrg();
  $("statReports").textContent="—";$("statOpen").textContent="—";$("recentList").innerHTML='<div class="empty">Laporan internal hanya tersedia bagi akun proyek.</div>';
@@ -626,14 +652,14 @@ function renderPourManual(){
 function manualValues(ids){return ids.map(id=>{const n=Number($(id).value);if(!$(id).value.trim()||!Number.isFinite(n)||n<0)throw Error("Lengkapi seluruh angka dengan nilai positif atau nol.");return n;});}
 $("formManualInput")?.addEventListener("submit",e=>{
  e.preventDefault();if(isGuest){$("formManualMessage").textContent="Guest hanya dapat melihat, tidak bisa menginput.";return;}
- try{const [hours,ready,reuse,crew]=manualValues(["formHoursInput","formReadyInput","formReuseInput","formCrewInput"]);if([ready,reuse,crew].some(n=>!Number.isInteger(n)))throw Error("Jumlah modul, reuse, dan regu harus bilangan bulat.");
- manualRecords.form.push({time:new Date().toLocaleString("id-ID"),created_at:new Date().toISOString(),zone:$("formZone").value,hours,ready,reuse,crew,note:$("formNoteInput").value});manualRecords.form=manualRecords.form.slice(-60);const saved=persistManual();renderFormManual();renderReports();$("formManualInput").reset();$("formManualMessage").textContent=saved?"Tersimpan pada browser ini.":"Catatan hanya tersimpan selama sesi (penyimpanan browser tidak tersedia).";}catch(err){$("formManualMessage").textContent=err.message;}
+ try{const eventTime=localDateTime("formDateTimeInput");const [hours,ready,reuse,crew]=manualValues(["formHoursInput","formReadyInput","formReuseInput","formCrewInput"]);if([ready,reuse,crew].some(n=>!Number.isInteger(n)))throw Error("Jumlah modul, reuse, dan regu harus bilangan bulat.");
+ manualRecords.form.push({time:eventTime.toLocaleString("id-ID"),created_at:eventTime.toISOString(),zone:$("formZone").value,hours,ready,reuse,crew,note:$("formNoteInput").value});manualRecords.form=manualRecords.form.slice(-60);const saved=persistManual();renderFormManual();renderReports();$("formManualInput").reset();defaultManualDateTimes();$("formManualMessage").textContent=saved?"Tersimpan pada browser ini.":"Catatan hanya tersimpan selama sesi (penyimpanan browser tidak tersedia).";}catch(err){$("formManualMessage").textContent=err.message;}
 });
 $("pourManualInput")?.addEventListener("submit",e=>{
  e.preventDefault();if(isGuest){$("pourManualMessage").textContent="Guest hanya dapat melihat, tidak bisa menginput.";return;}
- try{const [capacity,arrivals,queue,wait]=manualValues(["pourCapacityInput","pourArrivalsInput","pourQueueInput","pourWaitInput"]);if(!Number.isInteger(arrivals)||!Number.isInteger(queue)||queue>arrivals)throw Error("Jumlah truk harus bulat dan antrean tidak boleh melebihi kedatangan.");
- manualRecords.pour.push({time:new Date().toLocaleString("id-ID"),created_at:new Date().toISOString(),capacity,arrivals,queue,wait,zone:$("pourZoneInput").value,note:$("pourNoteInput").value});manualRecords.pour=manualRecords.pour.slice(-60);const saved=persistManual();renderPourManual();renderReports();$("pourManualInput").reset();$("pourManualMessage").textContent=saved?"Tersimpan pada browser ini.":"Catatan hanya tersimpan selama sesi (penyimpanan browser tidak tersedia).";}catch(err){$("pourManualMessage").textContent=err.message;}
+ try{const eventTime=localDateTime("pourDateTimeInput");const [capacity,arrivals,queue,wait]=manualValues(["pourCapacityInput","pourArrivalsInput","pourQueueInput","pourWaitInput"]);if(!Number.isInteger(arrivals)||!Number.isInteger(queue)||queue>arrivals)throw Error("Jumlah truk harus bulat dan antrean tidak boleh melebihi kedatangan.");
+ manualRecords.pour.push({time:eventTime.toLocaleString("id-ID"),created_at:eventTime.toISOString(),capacity,arrivals,queue,wait,zone:$("pourZoneInput").value,note:$("pourNoteInput").value});manualRecords.pour=manualRecords.pour.slice(-60);const saved=persistManual();renderPourManual();renderReports();$("pourManualInput").reset();defaultManualDateTimes();$("pourManualMessage").textContent=saved?"Tersimpan pada browser ini.":"Catatan hanya tersimpan selama sesi (penyimpanan browser tidak tersedia).";}catch(err){$("pourManualMessage").textContent=err.message;}
 });
 document.querySelectorAll("[data-open-innovation]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.openInnovation)));
-renderFormManual();renderPourManual();innovationReportsReady=true;renderReports();
+defaultManualDateTimes();renderFormManual();renderPourManual();innovationReportsReady=true;renderReports();
 setInnovationOverview("cctv","Deteksi APD virtual");
