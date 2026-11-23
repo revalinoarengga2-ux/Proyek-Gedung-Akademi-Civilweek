@@ -228,11 +228,7 @@ $("addWorkBtn").addEventListener("click",async()=>{
  const {error}=await db.from("work_items").insert({name,category:"Pekerjaan tambahan",weight_percent:weight,planned_percent:0,sort_order:workItems.length+1});
  if(error)alert(error.message);else await loadWork();
 });
-$("connectCamera").addEventListener("click",()=>{
- const url=$("cameraUrl").value.trim();if(!url)return alert("Masukkan URL stream kamera terlebih dahulu.");
- $("cameraVideo").src=url;$("cameraVideo").classList.add("visible");$("cameraPlaceholder").classList.add("hidden");
- $("cameraVideo").play().catch(()=>alert("Stream tidak dapat diputar. Pastikan URL HLS/MP4/WebRTC gateway dan izin akses kamera sudah benar."));
-});
+
 $("exportBtn").addEventListener("click",()=>{
  const rows=[["Tanggal","Pelapor","Jabatan","Jenis","Lokasi","Prioritas","Status","Uraian"],...reports.map(r=>[r.created_at,r.reporter_name,"",r.report_type,r.location,r.priority,r.status,r.description])];
  const csv=rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n");
@@ -304,32 +300,83 @@ monitorConfigs.forEach(config=>{
 setInterval(()=>{if(document.hidden)return;monitorConfigs.forEach(config=>addMonitorSample(config));},8000);
 
 
-/* Smart PPE digital twin: 12 independent zones, 8 animated workers per zone.
-   Synthetic data only. No physical cameras or AI inference. */
-const ppeZones=["Persiapan","Pondasi","Galian","Struktur Bawah","Lantai 1","Lantai 2","Lantai 3","Lantai 4","Lantai 5","Lantai 6","Facade","Area Pengecoran"];
+
+/* Digital twin K3 — synthetic demo, never physical CCTV or real AI inference. */
+const ppeZones=["Persiapan","Pondasi","Galian","Struktur Bawah","Lantai 1","Lantai 2","Lantai 3","Lantai 4","Lantai 5","Lantai 6","Fasad","Pengecoran"];
 const ppeIssues=["Helm","Rompi","Sepatu safety","Sarung tangan"];
-let ppeWorkers=[],ppeTick=0,ppeRunning=true;
 const ppeGrid=document.getElementById("ppeCameraGrid"),ppeFilter=document.getElementById("ppeZoneFilter");
+let ppeWorkers=[],ppeRunning=true,ppeCycle=0,ppeEvents=[],ppeLastIssues=new Map();
+const ppeTime=()=>new Date().toLocaleTimeString("id-ID");
+const ppeZoneName=z=>"Zona "+String.fromCharCode(65+z);
+const ppeWorkerName=w=>"P"+String(w.id).padStart(3,"0");
+function ppeCreateWorker(id){
+ const zone=Math.floor((id-1)/8),slot=(id-1)%8;
+ return {id,zone,x:6+(slot%4)*23+Math.random()*5,depth:slot<4?0:1,dir:slot%2?1:-1,speed:.35+Math.random()*.7,phase:Math.random()*6.28,issue:(id%17===0||id%23===0)?ppeIssues[id%4]:null};
+}
+function ppeRecord(w){
+ const key=w.id,old=ppeLastIssues.get(key)||null;
+ if(old===w.issue)return;
+ ppeLastIssues.set(key,w.issue);
+ if(!w.issue)return;
+ ppeEvents.unshift({time:ppeTime(),zone:w.zone,worker:ppeWorkerName(w),issue:w.issue,confidence:(89+w.id%10)+"%",status:"Perlu pemeriksaan"});
+ if(ppeEvents.length>100)ppeEvents.length=100;
+}
+function ppeRenderEvents(){
+ const active=ppeWorkers.filter(w=>w.issue);
+ document.getElementById("ppeAlertLog").innerHTML=active.length?active.map(w=>'<tr><td>'+ppeTime()+'</td><td>'+ppeZoneName(w.zone)+'</td><td>'+ppeWorkerName(w)+'</td><td>'+w.issue+' tidak terdeteksi</td><td><span class="pill warn">Perlu pemeriksaan</span></td></tr>').join(""):'<tr><td colspan="5">Tidak ada kejadian aktif</td></tr>';
+ document.getElementById("cctvEvents").innerHTML=ppeEvents.length?ppeEvents.slice(0,35).map(e=>'<tr><td>'+e.time+'</td><td>CAM-'+String(e.zone+1).padStart(2,"0")+' / '+ppeZoneName(e.zone)+'</td><td>'+e.worker+' · '+e.issue+' tidak terdeteksi</td><td>'+e.confidence+'</td><td>'+e.status+'</td></tr>').join(""):'<tr><td colspan="5">Belum ada kejadian</td></tr>';
+}
+function ppeStats(){
+ const active=ppeWorkers.filter(w=>w.issue);
+ document.getElementById("ppeWorkerCount").textContent=ppeWorkers.length;
+ document.getElementById("ppeCompliant").textContent=(ppeWorkers.length-active.length)+" / "+ppeWorkers.length;
+ document.getElementById("ppeAlerts").textContent=active.length;
+ document.getElementById("ppeHelmets").textContent=ppeWorkers.filter(w=>w.issue!=="Helm").length;
+ document.getElementById("ppeVests").textContent=ppeWorkers.filter(w=>w.issue!=="Rompi").length;
+ document.getElementById("ppeShoes").textContent=ppeWorkers.filter(w=>w.issue!=="Sepatu safety").length;
+ document.getElementById("ppeIncidentCount").textContent=ppeEvents.length;
+ ppeRenderEvents();
+ ppeGrid.querySelectorAll(".ppe-cam").forEach(el=>{
+  const z=Number(el.dataset.ppeZone),n=ppeWorkers.filter(w=>w.zone===z&&w.issue).length;
+  const status=el.querySelector(".ppe-cam-foot strong");status.textContent=n?n+" peringatan":"APD lengkap";status.classList.toggle("has-alert",n>0);
+ });
+}
+function ppePersonHTML(w){
+ const label=ppeWorkerName(w);
+ return '<div class="ppe-person'+(w.issue?' bad':'')+'" id="ppe-worker-'+w.id+'" style="left:'+w.x+'%;bottom:'+(w.depth?5:25)+'%;transform:scale('+(w.depth?1.0:.78)+')"><span class="ppe-detection"></span><span class="ppe-id">'+label+'</span><svg viewBox="0 0 40 66" aria-hidden="true"><circle cx="20" cy="13" r="9" fill="#d7a67b"/><path d="M10 12 Q20 -4 30 12Z" fill="'+(w.issue==="Helm"?"#a16c52":"#ffbd19")+'"/><path d="M11 24 L29 24 L33 46 L8 46Z" fill="'+(w.issue==="Rompi"?"#4b7a9d":"#eab523")+'"/><path d="M15 46 L13 63 M26 46 L29 63" stroke="#33404b" stroke-width="6"/><path d="M10 29 L4 43 M30 29 L36 43" stroke="#c78d63" stroke-width="5"/></svg><span class="ppe-shadow"></span>'+(w.issue?'<span class="ppe-issue">Tanpa '+w.issue+'</span>':'')+'</div>';
+}
+function ppeBuild(){
+ ppeGrid.innerHTML=ppeZones.map((name,z)=>'<article class="ppe-cam" data-ppe-zone="'+z+'"><div class="ppe-cam-top"><b>CAM-'+String(z+1).padStart(2,"0")+' · '+ppeZoneName(z)+'</b><span>● DATA VIRTUAL</span></div><div class="ppe-viewport"><div class="ppe-structure"></div><div class="ppe-work-ground"></div>'+ppeWorkers.filter(w=>w.zone===z).map(ppePersonHTML).join("")+'</div><div class="ppe-cam-foot"><span>'+name+' · 8 pekerja</span><strong>APD lengkap</strong></div></article>').join("");
+ ppeFilterApply();ppeStats();
+}
+function ppeFilterApply(){ppeGrid.querySelectorAll(".ppe-cam").forEach(el=>{el.style.display=ppeFilter.value==="all"||el.dataset.ppeZone===ppeFilter.value?"":"none";});}
+function ppeMove(){
+ ppeCycle++;
+ ppeWorkers.forEach(w=>{
+  w.x+=w.dir*w.speed;
+  if(w.x>91){w.x=91;w.dir=-1;}else if(w.x<3){w.x=3;w.dir=1;}
+  const el=document.getElementById("ppe-worker-"+w.id);
+  if(el){el.style.left=w.x+"%";el.style.transform="scale("+(w.depth?1:.78)+") translateY("+Math.abs(Math.sin(ppeCycle*.85+w.phase))*-2+"px)";el.querySelector("svg").style.transform="scaleX("+w.dir+")";}
+ });
+ if(ppeCycle%10===0){
+  const w=ppeWorkers[(ppeCycle*7)%ppeWorkers.length];
+  w.issue=w.issue?null:ppeIssues[(ppeCycle/10)%4];
+  ppeRecord(w);
+  const el=document.getElementById("ppe-worker-"+w.id);
+  if(el){el.classList.toggle("bad",!!w.issue);const issue=el.querySelector(".ppe-issue");if(issue)issue.remove();if(w.issue)el.insertAdjacentHTML("beforeend",'<span class="ppe-issue">Tanpa '+w.issue+'</span>');}
+  ppeStats();
+ }
+}
 if(ppeGrid&&ppeFilter){
- ppeZones.forEach((z,i)=>ppeFilter.insertAdjacentHTML("beforeend",'<option value="'+i+'">Zona '+String.fromCharCode(65+i)+' · '+z+'</option>'));
- function ppeScenario(){
-  ppeWorkers=Array.from({length:96},(_,i)=>({id:i+1,zone:Math.floor(i/8),x:8+(i%8)*11,y:8+(i*13%37),issue:(i*7+ppeTick*3)%13===0?ppeIssues[(i+ppeTick)%4]:null}));
-  ppeGrid.innerHTML=ppeZones.map((z,zone)=>{
-   const members=ppeWorkers.filter(w=>w.zone===zone),bad=members.filter(w=>w.issue).length;
-   return '<article class="ppe-cam" data-ppe-zone="'+zone+'"><div class="ppe-cam-top"><b>CAM-'+String(zone+1).padStart(2,"0")+' · Zona '+String.fromCharCode(65+zone)+'</b><span>● SIMULASI</span></div><div class="ppe-viewport"><div class="ppe-structure"></div>'+members.map(w=>'<div class="ppe-person'+(w.issue?' bad':'')+'" id="ppe-worker-'+w.id+'" style="left:'+w.x+'%;top:'+w.y+'%"><span class="ppe-detection"></span><span class="ppe-id">P'+String(w.id).padStart(3,"0")+'</span><svg viewBox="0 0 40 66" aria-hidden="true"><circle cx="20" cy="13" r="9" fill="#d7a67b"/><path d="M10 12 Q20 -4 30 12Z" fill="'+(w.issue==="Helm"?"#c77d55":"#ffbd19")+'"/><path d="M11 24 L29 24 L33 46 L8 46Z" fill="'+(w.issue==="Rompi"?"#4b7a9d":"#eab523")+'"/><path d="M15 46 L13 63 M26 46 L29 63" stroke="#33404b" stroke-width="6"/><path d="M10 29 L4 43 M30 29 L36 43" stroke="#c78d63" stroke-width="5"/></svg>'+(w.issue?'<span class="ppe-issue">Tanpa '+w.issue+'</span>':'')+'</div>').join("")+'</div><div class="ppe-cam-foot"><span>'+z+' · '+members.length+' pekerja</span><strong class="'+(bad?'has-alert':'')+'">'+(bad?bad+' peringatan':'APD lengkap')+'</strong></div></article>';
-  }).join("");
-  ppeUpdateStats();ppeApplyFilter();
- }
- function ppeApplyFilter(){const selected=ppeFilter.value;ppeGrid.querySelectorAll(".ppe-cam").forEach(el=>el.style.display=selected==="all"||el.dataset.ppeZone===selected?"":"none");}
- function ppeUpdateStats(){
-  const bad=ppeWorkers.filter(w=>w.issue),good=ppeWorkers.length-bad.length;
-  document.getElementById("ppeCompliant").textContent=good+" / "+ppeWorkers.length;
-  document.getElementById("ppeAlerts").textContent=bad.length;
-  document.getElementById("ppeAlertLog").innerHTML=bad.slice(0,14).map(w=>'<tr><td>'+new Date().toLocaleTimeString("id-ID")+'</td><td>Zona '+String.fromCharCode(65+w.zone)+'</td><td>P'+String(w.id).padStart(3,"0")+'</td><td>APD: '+w.issue+' tidak terdeteksi (simulasi)</td></tr>').join("")||'<tr><td colspan="4">Tidak ada peringatan simulasi</td></tr>';
- }
- ppeFilter.addEventListener("change",ppeApplyFilter);
+ ppeZones.forEach((name,z)=>ppeFilter.add(new Option(ppeZoneName(z)+" · "+name,String(z))));
+ ppeWorkers=Array.from({length:96},(_,i)=>ppeCreateWorker(i+1));
+ ppeWorkers.forEach(ppeRecord);
+ ppeBuild();
+ ppeFilter.addEventListener("change",ppeFilterApply);
  document.getElementById("ppeAnimate").addEventListener("change",e=>ppeRunning=e.target.checked);
- document.getElementById("ppeRefresh").addEventListener("click",()=>{ppeTick++;ppeScenario();});
- ppeScenario();
- setInterval(()=>{if(!ppeRunning||document.hidden)return;ppeTick++;ppeWorkers.forEach(w=>{w.x=Math.max(3,Math.min(91,w.x+Math.sin(ppeTick*.75+w.id)*3));const el=document.getElementById("ppe-worker-"+w.id);if(el)el.style.transform="translate("+Math.sin(ppeTick*.8+w.id)*8+"px,"+Math.cos(ppeTick*.6+w.id)*5+"px)";});if(ppeTick%4===0)ppeScenario();},1600);
+ document.getElementById("ppeRefresh").addEventListener("click",()=>{
+  ppeWorkers.forEach(w=>{if(Math.random()<.15){w.issue=Math.random()<.55?ppeIssues[Math.floor(Math.random()*4)]:null;ppeRecord(w);}});
+  ppeBuild();
+ });
+ setInterval(()=>{if(!ppeRunning||document.hidden)return;ppeMove();},180);
 }
