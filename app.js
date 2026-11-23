@@ -90,7 +90,7 @@ function renderMembers(){
 function renderWorkOptions(){
  const options=workItems.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join("");
  $("workItem").innerHTML='<option value="">Pilih pekerjaan</option>'+options;
- $("progressWork").innerHTML='<option value="">Pilih pekerjaan</option>'+options;
+
 }
 async function loadMembers(){
  const {data,error}=await db.from("profiles").select("id,full_name,position,role,organization_group").order("full_name");
