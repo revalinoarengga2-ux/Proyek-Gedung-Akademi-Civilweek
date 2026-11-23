@@ -120,14 +120,14 @@ function renderReports(){
  $("recentList").innerHTML=reports.slice(0,6).map(r=>`<div class="activity"><span class="activity-dot"></span><div><b>${esc(r.report_type)} · ${esc(r.location)}</b><small>${esc(r.reporter_name)} · ${fmtDate(r.created_at)}</small><p>${esc(r.description||"").slice(0,110)}</p></div></div>`).join("")||'<div class="empty">Belum ada laporan.</div>';
  $("lastUpdated").textContent="Diperbarui "+new Date().toLocaleTimeString("id-ID");
 }
-function latestActual(workId){const rows=progressRows.filter(p=>p.work_item_id===workId);return rows.length?Number(rows[rows.length-1].actual_percent):0;}
+function latestActual(workId){const rows=progressRows.filter(p=>p.work_item_id===workId).sort((a,b)=>a.period.localeCompare(b.period)||a.created_at.localeCompare(b.created_at));return rows.length?Number(rows[rows.length-1].actual_percent):0;}
 function weightedActual(){return workItems.reduce((s,w)=>s+Number(w.weight_percent||0)*latestActual(w.id)/100,0);}
 function planValue(){return baselineRows.length?Number(baselineRows[baselineRows.length-1].planned_cumulative):workItems.reduce((s,w)=>s+Number(w.weight_percent||0)*Number(w.planned_percent||0)/100,0);}
 function updateStats(){
  const wt=workItems.reduce((s,w)=>s+Number(w.weight_percent||0),0);
  const a=weightedActual(),p=planValue();
  $("statPlan").textContent=fmtPct(p);$("statActual").textContent=fmtPct(a);
- $("weightTotal").textContent=fmtPct(wt);$("curvePlan").textContent=fmtPct(p);$("curveActual").textContent=fmtPct(a);$("curveDeviation").textContent=(a-p>=0?"+":"")+fmtPct(a-p);
+ $("weightTotal").textContent=fmtPct(wt)+(Math.abs(wt-100)>0.005?" ⚠ Periksa bobot":"");$("curvePlan").textContent=fmtPct(p);$("curveActual").textContent=fmtPct(a);$("curveDeviation").textContent=(a-p>=0?"+":"")+fmtPct(a-p);
 }
 function renderWorkTable(){
  $("workTable").innerHTML=workItems.map(w=>`<tr><td>${esc(w.name)}</td><td>${fmtPct(w.weight_percent)}</td><td>${fmtPct(w.planned_percent)}</td><td><b>${fmtPct(latestActual(w.id))}</b></td></tr>`).join("")||'<tr><td colspan="4" class="empty">Belum ada daftar pekerjaan.</td></tr>';
@@ -137,7 +137,7 @@ function weightedActualAt(period){
  return workItems.reduce((sum,w)=>{
   const rows=progressRows.filter(p=>p.work_item_id===w.id && p.period<=period);
   if(!rows.length)return sum;
-  const last=rows[rows.length-1];
+  const last=rows.sort((a,b)=>a.period.localeCompare(b.period)||a.created_at.localeCompare(b.created_at))[rows.length-1];
   return sum+Number(w.weight_percent||0)*Number(last.actual_percent||0)/100;
  },0);
 }
@@ -226,7 +226,7 @@ $("connectCamera").addEventListener("click",()=>{
 });
 $("exportBtn").addEventListener("click",()=>{
  const rows=[["Tanggal","Pelapor","Jabatan","Jenis","Lokasi","Prioritas","Status","Uraian"],...reports.map(r=>[r.created_at,r.reporter_name,"",r.report_type,r.location,r.priority,r.status,r.description])];
- const csv=rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\\n");
+ const csv=rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n");
  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\\ufeff"+csv],{type:"text/csv;charset=utf-8"}));a.download="laporan-civilweek.csv";a.click();URL.revokeObjectURL(a.href);
 });
 renderOrg();
