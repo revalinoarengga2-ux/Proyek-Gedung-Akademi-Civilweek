@@ -33,6 +33,8 @@ const org = [
   ["Safety Officer","Radja Michael, S.T.","supervisor"],
   ["Environmental Officer","Rokhim Trisna, S.T.","staff"]
 ];
+window.civilweekOrganization=org;
+
 
 const defaultWork = [
  ["Pekerjaan Persiapan dan Umum","Pekerjaan Persiapan Umum",1.45],
