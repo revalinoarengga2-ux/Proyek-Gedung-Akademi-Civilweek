@@ -184,14 +184,14 @@ tr:hover td{background:#fffaf0}
         </section>
 
         <section class="page hidden" id="page-curve">
-          <div class="section-head"><div><h2>Kurva S Rencana & Realisasi</h2><p class="muted">Input progres per pekerjaan, kemudian pantau deviasi kumulatif proyek.</p></div></div>
+          <div class="section-head"><div><h2>Kurva S Rencana & Realisasi</h2><p class="muted">Kurva rencana 33 minggu dan realisasi berdasarkan progres pekerjaan.</p></div></div>
           <div class="stats compact">
             <article class="stat"><span>Total Bobot Rencana Pekerjaan</span><b id="weightTotal">0%</b></article>
             <article class="stat"><span>Progres Rencana Kumulatif</span><b id="curvePlan">0%</b></article>
             <article class="stat"><span>Progres Realisasi Kumulatif</span><b id="curveActual">0%</b></article>
             <article class="stat"><span>Deviasi</span><b id="curveDeviation">0%</b></article>
           </div>
-          <article class="panel chart-panel"><div class="panel-title"><h3>Grafik Kurva S</h3><div class="legend"><span><i class="dot plan"></i>Rencana</span><span><i class="dot actual"></i>Realisasi</span></div></div><canvas id="mainCurve" height="300"></canvas></article>
+          <article class="panel chart-panel"><div class="panel-title"><h3>Grafik Kurva S · 33 Minggu</h3><div class="legend"><span><i class="dot plan"></i>Rencana</span><span><i class="dot actual"></i>Realisasi</span></div></div><canvas id="mainCurve" height="300"></canvas></article>
           <div class="grid-two align-start">
             <article class="panel">
               <h3>Input Baseline Kurva S</h3>
@@ -204,7 +204,7 @@ tr:hover td{background:#fffaf0}
                 <div id="baselineMessage" class="form-message"></div>
               </form>
               <div class="table-wrap"><table><thead><tr><th>Periode</th><th>Rencana kumulatif</th></tr></thead><tbody id="baselineTable"></tbody></table></div>
-              <p class="hint">Masukkan titik rencana kumulatif dari baseline Kurva S yang disetujui, satu titik untuk setiap minggu/periode. Grafik tidak mengarang angka rencana.</p>
+              <p class="hint">Kurva 33 minggu awal adalah rekonstruksi perkiraan dari gambar jadwal yang dikirim, bukan transkripsi angka resmi. Baseline tersimpan di Supabase tetap diprioritaskan jika tersedia. Untuk nilai mingguan yang presisi, gunakan tabel sumber Excel.</p>
             </article>
             <article class="panel">
               <h3>Input Realisasi Pekerjaan</h3>
