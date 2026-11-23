@@ -70,3 +70,5 @@ tr:hover td{background:#fffaf0}
 .innovation-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:16px}
 @keyframes innovationPulse{from{filter:brightness(.92);transform:translateY(3px)}to{filter:brightness(1.1);transform:translateY(-3px)}}@keyframes innovationTravel{from{left:12%}to{left:83%}}
 @media(max-width:800px){.innovation-grid{grid-template-columns:1fr}}@media(prefers-reduced-motion:reduce){.scene-object,.scene-marker{animation:none}}
+
+.innovation-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.innovation-kpis .stat b{font-size:25px}.monitor-check{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #eee4ce;border-radius:9px;background:#fffdf7;font-size:12px}.monitor-check input{width:18px;height:18px;min-width:18px;accent-color:#f6b300}.monitor-check:has(input:checked){border-color:#e4b540;background:#fff5d7}@media(max-width:850px){.innovation-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
