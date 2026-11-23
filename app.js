@@ -115,8 +115,25 @@ async function loadWeeklyProgress(){
  if(error){console.warn("Gagal memuat realisasi mingguan",error);return;}
  weeklyProgress=data||[];updateStats();drawCurves();renderWeeklyCurveTable();
 }
+function innovationReports(){
+ const entries=[];
+ for(const [kind,label] of [["form","Rapid-Cycle Formwork"],["pour","Smart Pour Scheduling"]]){
+  (manualRecords?.[kind]||[]).forEach((r,i)=>{
+   const when=r.created_at||r.time||"";
+   const detail=kind==="form"?("Durasi "+r.hours+" jam, "+r.ready+" modul siap, "+r.crew+" regu, reuse "+r.reuse+" kali"):("Kapasitas pompa "+r.capacity+" m³/jam, "+r.arrivals+" truk tiba, "+r.queue+" truk antre, tunggu "+r.wait+" menit");
+   entries.push({id:"manual-"+kind+"-"+i,created_at:when,reporter_name:"Input manual inovasi (browser ini)",report_type:label,location:r.zone||"Proyek",status:"Catatan operasional",priority:"Normal",description:detail+(r.note?" · "+r.note:"")});
+  });
+ }
+ for(const config of monitorConfigs){
+  (monitorSamples[config.id]||[]).filter(r=>r.value>config.limit).slice(-12).forEach((r,i)=>entries.push({id:"virtual-"+config.id+"-"+i,created_at:r.time.toISOString(),reporter_name:config.id==="mag"?"Sensor virtual MAG-CAGE":"Sensor virtual Safe-Excavate",report_type:config.id==="mag"?"Peringatan MAG-CAGE":"Peringatan Safe-Excavate",location:"Monitoring inovasi",status:"Simulasi · Waspada",priority:"Menengah",description:config.metric+" "+r.value+" "+config.unit+" melampaui ambang demo "+config.limit+" "+config.unit+". Bukan hasil sensor lapangan."}));
+ }
+ return entries;
+}
+function allVisibleReports(){
+ return [...virtualK3Reports,...innovationReports(),...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+}
 function renderReports(){
- const allReports=[...virtualK3Reports,...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ if(isGuest)return;const allReports=allVisibleReports();
  $("statReports").textContent=allReports.length;
  $("statOpen").textContent=allReports.filter(r=>!["Selesai","Ditutup"].includes(r.status)).length;
  $("reportsTable").innerHTML=allReports.length?allReports.map(r=>`<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.reporter_name)}</td><td>${esc(r.report_type)}</td><td>${esc(r.location)}</td><td><span class="pill ${r.status==="Selesai"?"success":"warn"}">${esc(r.status||"Baru")}</span></td></tr>`).join(""):`<tr><td colspan="5" class="empty">Belum ada laporan.</td></tr>`;
@@ -247,7 +264,7 @@ $("addWorkBtn").addEventListener("click",async()=>{
 
 function exportableReports(){
  if(isGuest)throw Error("Guest tidak dapat mengakses laporan proyek.");
- return [...virtualK3Reports,...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ return allVisibleReports();
 }
 function reportExportRows(){
  return exportableReports().map(r=>[fmtDate(r.created_at),r.reporter_name||"",r.report_type||"",r.location||"",r.priority||"",r.status||"",r.description||""]);
@@ -485,12 +502,12 @@ function manualValues(ids){return ids.map(id=>{const n=Number($(id).value);if(!$
 $("formManualInput")?.addEventListener("submit",e=>{
  e.preventDefault();if(isGuest){$("formManualMessage").textContent="Guest hanya dapat melihat, tidak bisa menginput.";return;}
  try{const [hours,ready,reuse,crew]=manualValues(["formHoursInput","formReadyInput","formReuseInput","formCrewInput"]);if([ready,reuse,crew].some(n=>!Number.isInteger(n)))throw Error("Jumlah modul, reuse, dan regu harus bilangan bulat.");
- manualRecords.form.push({time:new Date().toLocaleString("id-ID"),zone:$("formZone").value,hours,ready,reuse,crew,note:$("formNoteInput").value});manualRecords.form=manualRecords.form.slice(-60);const saved=persistManual();renderFormManual();$("formManualInput").reset();$("formManualMessage").textContent=saved?"Tersimpan pada browser ini.":"Catatan hanya tersimpan selama sesi (penyimpanan browser tidak tersedia).";}catch(err){$("formManualMessage").textContent=err.message;}
+ manualRecords.form.push({time:new Date().toLocaleString("id-ID"),created_at:new Date().toISOString(),zone:$("formZone").value,hours,ready,reuse,crew,note:$("formNoteInput").value});manualRecords.form=manualRecords.form.slice(-60);const saved=persistManual();renderFormManual();renderReports();$("formManualInput").reset();$("formManualMessage").textContent=saved?"Tersimpan pada browser ini.":"Catatan hanya tersimpan selama sesi (penyimpanan browser tidak tersedia).";}catch(err){$("formManualMessage").textContent=err.message;}
 });
 $("pourManualInput")?.addEventListener("submit",e=>{
  e.preventDefault();if(isGuest){$("pourManualMessage").textContent="Guest hanya dapat melihat, tidak bisa menginput.";return;}
  try{const [capacity,arrivals,queue,wait]=manualValues(["pourCapacityInput","pourArrivalsInput","pourQueueInput","pourWaitInput"]);if(!Number.isInteger(arrivals)||!Number.isInteger(queue)||queue>arrivals)throw Error("Jumlah truk harus bulat dan antrean tidak boleh melebihi kedatangan.");
- manualRecords.pour.push({time:new Date().toLocaleString("id-ID"),capacity,arrivals,queue,wait,zone:$("pourZoneInput").value,note:$("pourNoteInput").value});manualRecords.pour=manualRecords.pour.slice(-60);const saved=persistManual();renderPourManual();$("pourManualInput").reset();$("pourManualMessage").textContent=saved?"Tersimpan pada browser ini.":"Catatan hanya tersimpan selama sesi (penyimpanan browser tidak tersedia).";}catch(err){$("pourManualMessage").textContent=err.message;}
+ manualRecords.pour.push({time:new Date().toLocaleString("id-ID"),created_at:new Date().toISOString(),capacity,arrivals,queue,wait,zone:$("pourZoneInput").value,note:$("pourNoteInput").value});manualRecords.pour=manualRecords.pour.slice(-60);const saved=persistManual();renderPourManual();renderReports();$("pourManualInput").reset();$("pourManualMessage").textContent=saved?"Tersimpan pada browser ini.":"Catatan hanya tersimpan selama sesi (penyimpanan browser tidak tersedia).";}catch(err){$("pourManualMessage").textContent=err.message;}
 });
 document.querySelectorAll("[data-open-innovation]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.openInnovation)));
 renderFormManual();renderPourManual();
