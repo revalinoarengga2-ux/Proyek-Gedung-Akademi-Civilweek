@@ -4,6 +4,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 window.__civilweekBooted=true;
 const $ = (id) => document.getElementById(id);
 const configured = !SUPABASE_URL.includes("YOUR-PROJECT") && !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
+let isGuest=false;
 let db = null, currentUser = null, profile = null, members = [], workItems = [], reports = [], progressRows = [], baselineRows = [], weeklyProgress = [];
 if (configured) db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -75,7 +76,7 @@ function setConnected(ok, text){ $("connection").textContent=text; $("connection
 function fmtDate(v){ return v ? new Date(v).toLocaleString("id-ID",{dateStyle:"medium",timeStyle:"short"}) : "—"; }
 function fmtPct(v){ return `${Number(v||0).toFixed(2)}%`; }
 function esc(s=""){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function showPage(page){ document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden")); $("page-"+page).classList.remove("hidden"); document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.page===page)); if(page==="curve") drawCurves(); }
+function showPage(page){ if(isGuest&&page==="reports")return; document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden")); $("page-"+page).classList.remove("hidden"); document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.page===page)); if(page==="curve") drawCurves(); }
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
 
 function renderOrg(){
@@ -184,6 +185,18 @@ async function uploadPhoto(file){
  if(error)throw error;return path;
 }
 
+$("guestLoginBtn").addEventListener("click",()=>{
+ isGuest=true;currentUser=null;profile=null;members=[];reports=[];weeklyProgress=[];progressRows=[];
+ workItems=defaultWork.map(([name,category,weight_percent],i)=>({id:"demo-"+i,name,category,weight_percent}));
+ $("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
+ $("guestBanner").classList.remove("hidden");$("userName").textContent="Guest";$("userRole").textContent="Viewer · Demo";$("userInitial").textContent="G";
+ document.querySelector('[data-page="reports"]').classList.add("hidden");
+ $("addWorkBtn").classList.add("hidden");$("exportBtn").classList.add("hidden");
+ $("refreshBtn").textContent="↻ Perbarui Tampilan";
+ renderWorkTable();renderWeeklyCurveTable();updateStats();drawCurves();renderOrg();
+ $("statReports").textContent="—";$("statOpen").textContent="—";$("recentList").innerHTML='<div class="empty">Laporan internal hanya tersedia bagi akun proyek.</div>';
+ $("lastUpdated").textContent="Data demo";setConnected(true,"Guest · Viewer");showPage("dashboard");
+});
 $("loginForm").addEventListener("submit",async e=>{
  e.preventDefault();
  if(!configured){msg("loginMessage","Konfigurasi Supabase belum diisi. Ikuti README.md terlebih dahulu.");return;}
@@ -191,16 +204,16 @@ $("loginForm").addEventListener("submit",async e=>{
  if(error){msg("loginMessage",error.message);return;} await enterApp(data.user);
 });
 async function enterApp(user){
- currentUser=user;
+ isGuest=false;currentUser=user;
  const {data,error}=await db.from("profiles").select("*").eq("id",user.id).single();
  if(error){msg("loginMessage","Akun belum memiliki profil personel. Minta administrator melengkapi tabel profiles.");await db.auth.signOut();return;}
- profile=data;$("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
+ profile=data;$("guestBanner").classList.add("hidden");$("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
  $("userName").textContent=profile.full_name||user.email;$("userRole").textContent=profile.position||profile.role||"Personel";$("userInitial").textContent=(profile.full_name||"U")[0].toUpperCase();
  $("reportDate").value=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
  await refreshAll();setConnected(true,"Database online");
 }
-$("logoutBtn").addEventListener("click",async()=>{await db.auth.signOut();location.reload();});
-$("refreshBtn").addEventListener("click",refreshAll);
+$("logoutBtn").addEventListener("click",async()=>{if(!isGuest&&db)await db.auth.signOut();location.reload();});
+$("refreshBtn").addEventListener("click",()=>{if(isGuest){drawOne("miniCurve");return;}refreshAll();});
 
 $("reportForm").addEventListener("submit",async e=>{
  e.preventDefault();if(!db)return;
@@ -232,17 +245,39 @@ $("addWorkBtn").addEventListener("click",async()=>{
  if(error)alert(error.message);else await loadWork();
 });
 
-$("exportBtn").addEventListener("click",()=>{
- const rows=[["Tanggal","Pelapor","Jabatan","Jenis","Lokasi","Prioritas","Status","Uraian"],...reports.map(r=>[r.created_at,r.reporter_name,"",r.report_type,r.location,r.priority,r.status,r.description])];
- const csv=rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n");
- const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\\ufeff"+csv],{type:"text/csv;charset=utf-8"}));a.download="laporan-civilweek.csv";a.click();URL.revokeObjectURL(a.href);
-});
+function exportableReports(){
+ if(isGuest)throw Error("Guest tidak dapat mengakses laporan proyek.");
+ return [...virtualK3Reports,...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+}
+function reportExportRows(){
+ return exportableReports().map(r=>[fmtDate(r.created_at),r.reporter_name||"",r.report_type||"",r.location||"",r.priority||"",r.status||"",r.description||""]);
+}
+const reportColumns=["Tanggal","Pelapor","Jenis","Lokasi","Prioritas","Status","Uraian"];
+function safeCsvCell(value){
+ let s=String(value??"");if(/^[\\s]*[=+@-]/.test(s))s="'"+s;
+ return '"'+s.replace(/"/g,'""')+'"';
+}
+function downloadReportCsv(){
+ const rows=[reportColumns,...reportExportRows()];
+ const csv="\uFEFF"+rows.map(row=>row.map(safeCsvCell).join(",")).join("\r\n");
+ const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+ const a=document.createElement("a");a.href=url;a.download="laporan-civilweek-"+new Date().toISOString().slice(0,10)+".csv";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function printReportPdf(){
+ const rows=reportExportRows();
+ const css='body{font-family:Arial,sans-serif;color:#222;margin:25px}h1{font-size:22px}p{font-size:12px}table{border-collapse:collapse;width:100%;font-size:10px}td,th{border:1px solid #bbb;padding:7px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#f4e4b4}tr{break-inside:avoid}@page{size:A4 landscape;margin:12mm}';
+ const body='<h1>Laporan Proyek Civilweek</h1><p>Dicetak: '+esc(new Date().toLocaleString("id-ID"))+' · Total '+rows.length+' laporan</p><table><thead><tr>'+reportColumns.map(c=>'<th>'+esc(c)+'</th>').join("")+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(v=>'<td>'+esc(v)+'</td>').join("")+'</tr>').join("")+'</tbody></table>';
+ const w=window.open("","_blank");if(!w){alert("Izinkan pop-up untuk mencetak laporan.");return;}
+ w.document.open();w.document.write('<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Laporan Civilweek</title><style>'+css+'</style></head><body>'+body+'</body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),400);
+}
+$("reportCsvBtn").addEventListener("click",()=>{try{downloadReportCsv();}catch(e){alert(e.message);}});
+$("reportPdfBtn").addEventListener("click",()=>{try{printReportPdf();}catch(e){alert(e.message);}});
 renderOrg();
 if(!configured){setConnected(false,"Belum dikonfigurasi");$("loginMessage").textContent="Hubungkan Supabase terlebih dahulu (lihat README.md).";$("loginMessage").className="form-message error";}
 else{
  setConnected(false,"Menghubungkan…");
  db.auth.getSession().then(async({data,error})=>{if(error)throw error;if(data.session)await enterApp(data.session.user);else setConnected(true,"Siap masuk");}).catch(err=>{console.error("Supabase session:",err);setConnected(false,"Koneksi gagal: "+(err.message||"periksa jaringan"));});
- db.auth.onAuthStateChange((_event,session)=>{if(!session){$("appView").classList.add("hidden");$("loginView").classList.remove("hidden");$("logoutBtn").classList.add("hidden");}});
+ db.auth.onAuthStateChange((_event,session)=>{if(!session&&!isGuest){$("appView").classList.add("hidden");$("loginView").classList.remove("hidden");$("logoutBtn").classList.add("hidden");}});
 }
 window.addEventListener("resize",()=>{if(!$("page-curve").classList.contains("hidden"))drawCurves();if(!$("page-dashboard").classList.contains("hidden"))drawOne("miniCurve");});
 
