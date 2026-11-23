@@ -79,7 +79,18 @@ function esc(s=""){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt
 function showPage(page){ if(isGuest&&page==="reports")return; document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden")); $("page-"+page).classList.remove("hidden"); document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.page===page)); if(page==="curve") drawCurves(); }
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
 
+function renderProjectResponsibles(){
+ const names=new Map();
+ org.forEach(([position,name])=>{if(!["worker"].includes(org.find(x=>x[0]===position&&x[1]===name)?.[2]))names.set(name,position);});
+ members.forEach(m=>{if(m.full_name&&m.role!=="worker")names.set(m.full_name,m.position||m.role||"Personel proyek");});
+ for(const id of ["lpsOwner","constraintOwner"]){
+  const el=$(id);if(!el)return;const previous=el.value;
+  el.innerHTML='<option value="">Pilih penanggung jawab</option>'+[...names].map(([name,position])=>'<option value="'+esc(name)+'">'+esc(name)+' — '+esc(position)+'</option>').join("")+'<option value="Pekerja">Pekerja</option>';
+  if([...el.options].some(o=>o.value===previous))el.value=previous;
+ }
+}
 function renderOrg(){
+ renderProjectResponsibles();
  $("orgGrid").innerHTML = org.map(([role,name])=>`<div class="org-card"><b>${esc(role)}</b><span>${esc(name)}</span></div>`).join("");
 }
 function renderMembers(){
@@ -95,7 +106,7 @@ function renderWorkOptions(){
 }
 async function loadMembers(){
  const {data,error}=await db.from("profiles").select("id,full_name,position,role,organization_group").order("full_name");
- if(error) console.warn(error); members=data||[]; renderMembers();
+ if(error) console.warn(error); members=data||[]; renderMembers();renderProjectResponsibles();
 }
 async function loadWork(){
  const {data,error}=await db.from("work_items").select("*").order("sort_order");
@@ -254,7 +265,7 @@ function curvePerformance(){
  const week=baseline.findIndex(x=>x.period===latest.period)+1,plan=planMap.get(latest.period),actual=Number(latest.actual_cumulative),delta=actual-plan,spi=plan>0?actual/plan:null;
  const status=Math.abs(delta)<.005?"Sesuai rencana":delta<0?"Terlambat":"Lebih cepat";
  $("curveSpi").textContent=spi===null?"—":spi.toFixed(2);$("curveScheduleStatus").textContent=status;$("curveEvalWeek").textContent="Minggu "+week;
- $("curveAnalysis").textContent="Minggu "+week+": rencana kumulatif "+plan.toFixed(2)+"%, realisasi "+actual.toFixed(2)+"%, deviasi "+(delta>=0?"+":"")+delta.toFixed(2)+" poin persentase. "+(delta<-.005?"Progres berada di bawah rencana; perlu evaluasi penyebab dan tindakan korektif.":delta>.005?"Progres berada di atas rencana; periksa keberlanjutan sumber daya dan mutu.":"Realisasi sesuai dengan rencana pada minggu evaluasi.")+" Analisis tidak menggantikan verifikasi lapangan.";
+ $("curveAnalysis").textContent="Minggu "+week+": rencana kumulatif "+plan.toFixed(2)+"%, realisasi "+actual.toFixed(2)+"%, deviasi "+(delta>=0?"+":"")+delta.toFixed(2)+"% (selisih poin persentase). "+(delta<-.005?"Progres berada di bawah rencana; perlu evaluasi penyebab dan tindakan korektif.":delta>.005?"Progres berada di atas rencana; periksa keberlanjutan sumber daya dan mutu.":"Realisasi sesuai dengan rencana pada minggu evaluasi.")+" Analisis tidak menggantikan verifikasi lapangan.";
 }
 function renderWeeklyCurveTable(){
  const el=$("weeklyCurveTable");if(!el)return;
@@ -262,7 +273,7 @@ function renderWeeklyCurveTable(){
  el.innerHTML=activeBaseline().map((r,i)=>{
  const planned=Number(r.planned_cumulative),actual=map.get(r.period),has=map.has(r.period),delta=has?actual-planned:null;
  const status=!has?"Belum dilaporkan":Math.abs(delta)<.005?"Sesuai":delta<0?"Terlambat":"Lebih cepat";
- return `<tr><td>Minggu ${i+1}</td><td>${fmtPct(planned)}</td><td><b>${has?fmtPct(actual):"—"}</b></td><td>${has?(delta>=0?"+":"")+delta.toFixed(2)+" pp":"—"}</td><td>${status}</td></tr>`;
+ return `<tr><td>Minggu ${i+1}</td><td>${fmtPct(planned)}</td><td><b>${has?fmtPct(actual):"—"}</b></td><td>${has?(delta>=0?"+":"")+delta.toFixed(2)+"%":"—"}</td><td>${status}</td></tr>`;
  }).join("");
  curvePerformance();
 }
