@@ -267,3 +267,38 @@ Object.keys(innovationDemoSteps).forEach(id=>{
  document.querySelector('[data-demo-next="'+id+'"]')?.addEventListener("click",()=>updateInnovationDemo(id,(Number($("slider-"+id).value)+1)%4));
  document.querySelector('[data-demo-reset="'+id+'"]')?.addEventListener("click",()=>updateInnovationDemo(id,0));
 });
+
+
+const monitorConfigs=[{"id":"mag","unit":"mm","metric":"Deviasi jarak sengkang","base":3.1,"limit":5},{"id":"form","unit":"jam","metric":"Durasi siklus zona","base":21.4,"limit":24},{"id":"excavate","unit":"mm","metric":"Deformasi dinding","base":7.2,"limit":10},{"id":"pour","unit":"menit","metric":"Waktu tunggu truk","base":13.2,"limit":20}];
+const monitorSamples={};let sampleTick=0;
+function addMonitorSample(config){
+ const id=config.id;const rows=monitorSamples[id]||[];
+ const index=rows.length;
+ const value=+(config.base+Math.sin(index*1.37+config.base)*config.base*.21+Math.cos(index*.47)*config.base*.07).toFixed(1);
+ rows.push({time:new Date(),value});if(rows.length>24)rows.shift();monitorSamples[id]=rows;
+ renderMonitor(config);
+}
+function renderMonitor(config){
+ const rows=monitorSamples[config.id]||[],latest=rows.at(-1);if(!latest)return;
+ const pass=latest.value<=config.limit;
+ $("live-"+config.id).textContent=latest.value.toLocaleString("id-ID");
+ $("state-"+config.id).textContent=pass?"Normal":"Waspada";
+ $("state-"+config.id).style.color=pass?"#247d4c":"#b45309";
+ $("count-"+config.id).textContent=rows.length;
+ $("history-"+config.id).innerHTML=rows.slice(-8).reverse().map(r=>'<tr><td>'+r.time.toLocaleTimeString("id-ID")+'</td><td>'+r.value.toFixed(1)+' '+config.unit+'</td><td>'+config.limit+' '+config.unit+'</td><td>'+(r.value<=config.limit?"Normal":"Waspada")+'</td></tr>').join("");
+ const canvas=$("chart-"+config.id),ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height,p={l:42,r:18,t:20,b:32};
+ ctx.clearRect(0,0,w,h);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
+ const max=Math.max(config.limit*1.45,...rows.map(r=>r.value))*1.05;
+ for(let i=0;i<=4;i++){let y=p.t+(h-p.t-p.b)*i/4;ctx.strokeStyle="#e7e4dc";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();ctx.fillStyle="#777";ctx.font="12px sans-serif";ctx.fillText((max*(1-i/4)).toFixed(1),3,y+4);}
+ const yy=v=>p.t+(h-p.t-p.b)*(1-v/max),xx=i=>p.l+(w-p.l-p.r)*(rows.length===1?.5:i/(rows.length-1));
+ ctx.strokeStyle="#c65c20";ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(p.l,yy(config.limit));ctx.lineTo(w-p.r,yy(config.limit));ctx.stroke();ctx.setLineDash([]);
+ ctx.strokeStyle="#eda900";ctx.lineWidth=3;ctx.beginPath();rows.forEach((r,i)=>i?ctx.lineTo(xx(i),yy(r.value)):ctx.moveTo(xx(i),yy(r.value)));ctx.stroke();
+ rows.forEach((r,i)=>{ctx.fillStyle=r.value>config.limit?"#c65c20":"#e9a500";ctx.beginPath();ctx.arc(xx(i),yy(r.value),3,0,Math.PI*2);ctx.fill();});
+ ctx.fillStyle="#777";ctx.fillText("Pembacaan simulasi →",w-170,h-9);
+}
+monitorConfigs.forEach(config=>{
+ monitorSamples[config.id]=[];
+ for(let i=0;i<10;i++)addMonitorSample(config);
+ document.querySelector('[data-sample="'+config.id+'"]')?.addEventListener("click",()=>addMonitorSample(config));
+});
+setInterval(()=>{if(document.hidden)return;monitorConfigs.forEach(config=>addMonitorSample(config));},8000);
