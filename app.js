@@ -135,7 +135,7 @@ function allVisibleReports(){
 function renderReports(){
  if(isGuest)return;const allReports=allVisibleReports();
  $("statReports").textContent=allReports.length;
- $("statOpen").textContent=allReports.filter(r=>!["Selesai","Ditutup"].includes(r.status)).length;
+ $("statOpen").textContent=allReports.filter(r=>!["Selesai","Ditutup","Catatan operasional"].includes(r.status)&&!String(r.status||"").startsWith("Simulasi")).length;
  $("reportsTable").innerHTML=allReports.length?allReports.map(r=>`<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.reporter_name)}</td><td>${esc(r.report_type)}</td><td>${esc(r.location)}</td><td><span class="pill ${r.status==="Selesai"?"success":"warn"}">${esc(r.status||"Baru")}</span></td></tr>`).join(""):`<tr><td colspan="5" class="empty">Belum ada laporan.</td></tr>`;
  $("recentList").innerHTML=allReports.slice(0,6).map(r=>`<div class="activity"><span class="activity-dot"></span><div><b>${esc(r.report_type)} · ${esc(r.location)}</b><small>${esc(r.reporter_name)} · ${fmtDate(r.created_at)}</small><p>${esc(r.description||"").slice(0,110)}</p></div></div>`).join("")||'<div class="empty">Belum ada laporan.</div>';
  $("lastUpdated").textContent="Diperbarui "+new Date().toLocaleTimeString("id-ID");
@@ -366,7 +366,7 @@ monitorConfigs.forEach(config=>{
  for(let i=0;i<10;i++)addMonitorSample(config);
  document.querySelector('[data-sample="'+config.id+'"]')?.addEventListener("click",()=>addMonitorSample(config));
 });
-setInterval(()=>{if(document.hidden)return;monitorConfigs.forEach(config=>addMonitorSample(config));},8000);
+setInterval(()=>{if(document.hidden)return;monitorConfigs.forEach(config=>addMonitorSample(config));if(!isGuest&&currentUser)renderReports();},8000);
 
 
 
