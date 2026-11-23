@@ -135,7 +135,7 @@ function updateStats(){
  $("weightTotal").textContent=fmtPct(wt)+(Math.abs(wt-100)>0.005?" ⚠ Periksa bobot":"");$("curvePlan").textContent=fmtPct(p);$("curveActual").textContent=fmtPct(a);$("curveDeviation").textContent=(a-p>=0?"+":"")+fmtPct(a-p);
 }
 function renderWorkTable(){
- $("workTable").innerHTML=workItems.map(w=>`<tr><td>${esc(w.name)}</td><td>${fmtPct(w.weight_percent)}</td><td>${fmtPct(w.planned_percent)}</td><td><b>${fmtPct(latestActual(w.id))}</b></td></tr>`).join("")||'<tr><td colspan="4" class="empty">Belum ada daftar pekerjaan.</td></tr>';
+ $("workTable").innerHTML=workItems.map(w=>`<tr><td>${esc(w.name)}</td><td>${fmtPct(w.weight_percent)}</td><td><b>${fmtPct(latestActual(w.id))}</b></td></tr>`).join("")||'<tr><td colspan="3" class="empty">Belum ada daftar pekerjaan.</td></tr>';
  updateStats();
 }
 function weightedActualAt(period){
