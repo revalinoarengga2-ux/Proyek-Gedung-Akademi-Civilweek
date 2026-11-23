@@ -386,8 +386,10 @@ function ppeRecord(w){
 function ppeRenderEvents(){
  document.getElementById("cctvEvents").innerHTML=ppeEvents.length?ppeEvents.slice(0,50).map(e=>'<tr><td>'+e.time+'</td><td>CAM-'+String(e.zone+1).padStart(2,"0")+' / '+ppeZoneName(e.zone)+'</td><td>'+e.worker+' · '+e.issue+' tidak terdeteksi</td><td>'+e.confidence+'</td><td>'+e.status+'</td></tr>').join(""):'<tr><td colspan="5">Belum ada kejadian</td></tr>';
 }
+function setInnovationOverviewSafePpe(total,issues){const el=$("overview-cctv");if(el)el.textContent=total+" pekerja · "+issues+" pelanggaran virtual";}
 function ppeStats(){
  const active=ppeWorkers.filter(w=>w.issue);
+ setInnovationOverviewSafePpe(ppeWorkers.length,active.length);
  document.getElementById("ppeWorkerCount").textContent=ppeWorkers.length;
  document.getElementById("ppeCompliant").textContent=(ppeWorkers.length-active.length)+" / "+ppeWorkers.length;
  document.getElementById("ppeAlerts").textContent=active.length;
