@@ -430,12 +430,13 @@ function ppeCreateWorker(zone,slot){
  const id=ppeNextId++;
  return {id,zone,x:6+(slot%5)*18+ppeRandom()*5,depth:slot%2,dir:ppeRandom()<.5?-1:1,speed:.22+ppeRandom()*.9,phase:ppeRandom()*6.28,issue:ppeRandom()<.14?ppeIssues[ppeInt(0,3)]:null};
 }
+let innovationReportsReady=false;
 const virtualK3Reports=JSON.parse(sessionStorage.getItem("civilweek-k3-events")||"[]");
 function addVirtualK3Report(w){
  const now=new Date(),row={id:"k3-"+now.getTime()+"-"+w.id,created_at:now.toISOString(),reporter_name:"Smart PPE (data virtual)",report_type:"Inspeksi K3",location:"Zona "+String.fromCharCode(65+w.zone),status:"Perlu pemeriksaan",description:"Pekerja "+ppeWorkerName(w)+": "+w.issue+" tidak terdeteksi. Temuan virtual, bukan insiden lapangan.",priority:"Tinggi"};
  virtualK3Reports.unshift(row);if(virtualK3Reports.length>80)virtualK3Reports.length=80;
  sessionStorage.setItem("civilweek-k3-events",JSON.stringify(virtualK3Reports));
- renderReports();
+ if(innovationReportsReady)renderReports();
 }
 function ppeRecord(w){
  const key=w.id,old=ppeLastIssues.get(key)||null;
@@ -517,6 +518,7 @@ if(ppeGrid&&ppeFilter){
 
 
 /* Manual operational records: local browser storage, no synthetic truck arrivals. */
+
 const manualStoreKey="civilweek-manual-innovation-v1";
 let manualRecords={form:[],pour:[]};
 try{const saved=JSON.parse(localStorage.getItem(manualStoreKey)||"{}");for(const id of ["form","pour"])if(Array.isArray(saved[id]))manualRecords[id]=saved[id].slice(-60);}catch(e){console.warn("Catatan manual tidak dapat dibaca",e);}
@@ -556,5 +558,5 @@ $("pourManualInput")?.addEventListener("submit",e=>{
  manualRecords.pour.push({time:new Date().toLocaleString("id-ID"),created_at:new Date().toISOString(),capacity,arrivals,queue,wait,zone:$("pourZoneInput").value,note:$("pourNoteInput").value});manualRecords.pour=manualRecords.pour.slice(-60);const saved=persistManual();renderPourManual();renderReports();$("pourManualInput").reset();$("pourManualMessage").textContent=saved?"Tersimpan pada browser ini.":"Catatan hanya tersimpan selama sesi (penyimpanan browser tidak tersedia).";}catch(err){$("pourManualMessage").textContent=err.message;}
 });
 document.querySelectorAll("[data-open-innovation]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.openInnovation)));
-renderFormManual();renderPourManual();
+renderFormManual();renderPourManual();innovationReportsReady=true;renderReports();
 setInnovationOverview("cctv","Deteksi APD virtual");
