@@ -82,3 +82,13 @@ tr:hover td{background:#fffaf0}
 .ppe-cam-foot strong{color:#b3ffc9}.ppe-cam-foot strong.has-alert{color:#ffb3a9}
 @media(max-width:1050px){.ppe-camera-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:680px){.ppe-camera-grid{grid-template-columns:1fr}.ppe-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.ppe-person{transition:none}}
+
+
+.ppe-work-ground{position:absolute;bottom:0;left:0;width:100%;height:34%;background:linear-gradient(#a49b85,#817967);border-top:3px solid #c4b79c}
+.ppe-viewport{height:225px;background:linear-gradient(#a9c3cf 0 53%,#b9b1a0 53% 66%,#918977 66%)}
+.ppe-structure{bottom:34%;height:42%;opacity:.65}
+.ppe-person{height:59px;width:33px;transition:left .18s linear,transform .18s linear;transform-origin:bottom center;z-index:3}
+.ppe-person svg{position:relative;z-index:2}
+.ppe-shadow{position:absolute;left:5px;bottom:-3px;width:25px;height:6px;border-radius:50%;background:#29272055;filter:blur(2px)}
+.ppe-detection{z-index:3;pointer-events:none}
+.ppe-issue{z-index:4}
