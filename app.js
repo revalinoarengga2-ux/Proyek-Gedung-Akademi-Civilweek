@@ -305,7 +305,9 @@ setInterval(()=>{if(document.hidden)return;monitorConfigs.forEach(config=>addMon
 const ppeZones=Array.from({length:12},(_,i)=>"Zona "+String.fromCharCode(65+i));
 const ppeIssues=["Helm","Rompi","Sepatu safety","Sarung tangan"];
 const ppeGrid=document.getElementById("ppeCameraGrid"),ppeFilter=document.getElementById("ppeZoneFilter");
-let ppeWorkers=[],ppeRunning=true,ppeCycle=0,ppeEvents=[],ppeLastIssues=new Map(),ppeNextId=1,ppeRandomSeed=(Date.now()>>>0);\nfunction ppeRandom(){ppeRandomSeed=(Math.imul(1664525,ppeRandomSeed)+1013904223)>>>0;return ppeRandomSeed/4294967296;}\nconst ppeInt=(lo,hi)=>lo+Math.floor(ppeRandom()*(hi-lo+1));
+let ppeWorkers=[],ppeRunning=true,ppeCycle=0,ppeEvents=[],ppeLastIssues=new Map(),ppeNextId=1,ppeRandomSeed=(Date.now()>>>0);
+function ppeRandom(){ppeRandomSeed=(Math.imul(1664525,ppeRandomSeed)+1013904223)>>>0;return ppeRandomSeed/4294967296;}
+const ppeInt=(lo,hi)=>lo+Math.floor(ppeRandom()*(hi-lo+1));
 const ppeTime=()=>new Date().toLocaleTimeString("id-ID");
 const ppeZoneName=z=>"Zona "+String.fromCharCode(65+z);
 const ppeWorkerName=w=>"P"+String(w.id).padStart(3,"0");
