@@ -161,6 +161,32 @@ checklistIds.forEach(id=>{
  });
  renderChecklist(id);
 });
+const lpsKey="civilweek-lps-weekly-v1";
+let lpsRecords=[];
+try{const parsed=JSON.parse(localStorage.getItem(lpsKey)||"[]");if(Array.isArray(parsed))lpsRecords=parsed.slice(-200);}catch(e){console.warn("LPS:",e);}
+function renderLps(){
+ const evaluated=lpsRecords.filter(r=>r.status!=="Rencana"),done=evaluated.filter(r=>r.status==="Selesai").length;
+ $("lpsPpc").textContent=evaluated.length?Math.round(done/evaluated.length*100)+"%":"—";
+ $("lpsTotal").textContent=lpsRecords.length;
+ $("lpsConstraints").textContent=lpsRecords.filter(r=>r.constraint&&r.status!=="Selesai").length;
+ $("lpsTable").innerHTML=lpsRecords.slice().reverse().map(r=>'<tr><td>Minggu '+r.week+'</td><td>'+esc(r.task)+'</td><td>'+esc(r.owner)+'</td><td>'+esc(r.status)+'</td><td>'+esc(r.constraint||"—")+'</td><td>'+(isGuest?"Viewer":'<button class="btn btn-outline btn-small" data-lps-id="'+esc(r.id)+'" type="button">Ubah status</button>')+'</td></tr>').join("")||'<tr><td colspan="6">Belum ada rencana mingguan.</td></tr>';
+ $("lpsForm").querySelectorAll("input,select,button").forEach(el=>el.disabled=isGuest);
+}
+function persistLps(){try{localStorage.setItem(lpsKey,JSON.stringify(lpsRecords));return true;}catch(e){return false;}}
+$("lpsForm")?.addEventListener("submit",e=>{
+ e.preventDefault();if(isGuest)return;
+ const task=$("lpsTask").value.trim(),owner=$("lpsOwner").value.trim();if(!task||!owner)return;
+ lpsRecords.push({id:String(Date.now())+"-"+Math.random().toString(36).slice(2,7),created_at:new Date().toISOString(),week:Number($("lpsWeek").value),task,owner,status:$("lpsStatus").value,constraint:$("lpsConstraint").value.trim(),due:$("lpsDue").value});
+ lpsRecords=lpsRecords.slice(-200);const ok=persistLps();renderLps();renderReports();$("lpsForm").reset();$("lpsMessage").textContent=ok?"Rencana tersimpan di browser ini.":"Gagal menyimpan permanen; data hanya ada selama sesi.";
+});
+$("lpsTable")?.addEventListener("click",e=>{
+ const b=e.target.closest("[data-lps-id]");if(!b||isGuest)return;
+ const row=lpsRecords.find(r=>r.id===b.dataset.lpsId);if(!row)return;
+ row.status=row.status==="Rencana"?"Selesai":row.status==="Selesai"?"Belum selesai":"Rencana";
+ row.created_at=new Date().toISOString();persistLps();renderLps();renderReports();
+});
+function lpsReportEntries(){return lpsRecords.map(r=>({id:"lps-"+r.id,created_at:r.created_at,reporter_name:r.owner,report_type:"Rencana Mingguan · LPS",location:"Minggu "+r.week,status:r.status,priority:"Normal",description:r.task+(r.constraint?" · Constraint: "+r.constraint:"")+(r.due?" · Target: "+r.due:"")}));}
+renderLps();
 function innovationReports(){
  const entries=[];
  for(const [kind,label] of [["form","Rapid-Cycle Formwork"],["pour","Smart Pour Scheduling"]]){
@@ -176,7 +202,7 @@ function innovationReports(){
  return entries;
 }
 function allVisibleReports(){
- return [...virtualK3Reports,...innovationReports(),...checklistEntries(),...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ return [...virtualK3Reports,...innovationReports(),...lpsReportEntries(),...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
 }
 function renderReports(){
  if(isGuest)return;const allReports=allVisibleReports();
@@ -249,7 +275,7 @@ async function uploadPhoto(file){
 }
 
 $("guestLoginBtn").addEventListener("click",()=>{
- isGuest=true;currentUser=null;profile=null;checklistIds.forEach(renderChecklist);members=[];reports=[];weeklyProgress=[];progressRows=[];
+ isGuest=true;currentUser=null;profile=null;checklistIds.forEach(renderChecklist);renderLps();members=[];reports=[];weeklyProgress=[];progressRows=[];
  workItems=defaultWork.map(([name,category,weight_percent],i)=>({id:"demo-"+i,name,category,weight_percent}));
  $("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
  $("guestBanner").classList.remove("hidden");$("formManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("pourManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("userName").textContent="Guest";$("userRole").textContent="Viewer · Demo";$("userInitial").textContent="G";
@@ -267,7 +293,7 @@ $("loginForm").addEventListener("submit",async e=>{
  if(error){msg("loginMessage",error.message);return;} await enterApp(data.user);
 });
 async function enterApp(user){
- isGuest=false;currentUser=user;checklistIds.forEach(renderChecklist);
+ isGuest=false;currentUser=user;checklistIds.forEach(renderChecklist);renderLps();
  const {data,error}=await db.from("profiles").select("*").eq("id",user.id).single();
  if(error){msg("loginMessage","Akun belum memiliki profil personel. Minta administrator melengkapi tabel profiles.");await db.auth.signOut();return;}
  profile=data;$("guestBanner").classList.add("hidden");$("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
