@@ -89,6 +89,15 @@ tr:hover td{background:#fffaf0}
 .ppe-cam-foot strong{color:#b3ffc9}.ppe-cam-foot strong.has-alert{color:#ffb3a9}
 @media(max-width:1050px){.ppe-camera-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:680px){.ppe-camera-grid{grid-template-columns:1fr}.ppe-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.ppe-person{transition:none}}
+
+.ppe-work-ground{position:absolute;bottom:0;left:0;width:100%;height:34%;background:linear-gradient(#a49b85,#817967);border-top:3px solid #c4b79c}
+.ppe-viewport{height:225px;background:linear-gradient(#a9c3cf 0 53%,#b9b1a0 53% 66%,#918977 66%)}
+.ppe-structure{bottom:34%;height:42%;opacity:.65}
+.ppe-person{height:59px;width:33px;transition:left .18s linear,transform .18s linear;transform-origin:bottom center;z-index:3}
+.ppe-person svg{position:relative;z-index:2}
+.ppe-shadow{position:absolute;left:5px;bottom:-3px;width:25px;height:6px;border-radius:50%;background:#29272055;filter:blur(2px)}
+.ppe-detection{z-index:3;pointer-events:none}
+.ppe-issue{z-index:4}
 </style>
 </head>
 <body>
@@ -242,21 +251,16 @@ tr:hover td{background:#fffaf0}
 <div class="grid-two align-start"><article class="panel"><div class="panel-title"><h3>Grafik Monitoring · Waktu tunggu truk</h3><span class="pill gold">SIMULASI</span></div><canvas id="chart-pour" width="700" height="270" style="width:100%;height:auto;display:block" aria-label="Grafik data simulasi Smart Pour Scheduling"></canvas><p class="hint">Garis putus-putus: ambang skenario. Grafik diperbarui setiap 8 detik saat halaman terbuka.</p><button class="btn btn-primary btn-small" type="button" data-sample="pour">Tambahkan Pembacaan Simulasi</button></article>
 <article class="panel"><h3>Tahapan Pengawasan</h3><div class="innovation-checks"><label class="monitor-check"><input type="checkbox" data-stage="pour" data-index="0"><span>Kapasitas pompa dihitung</span></label><label class="monitor-check"><input type="checkbox" data-stage="pour" data-index="1"><span>Slot truk disusun</span></label><label class="monitor-check"><input type="checkbox" data-stage="pour" data-index="2"><span>Kedatangan dipantau</span></label><label class="monitor-check"><input type="checkbox" data-stage="pour" data-index="3"><span>Antrean dievaluasi</span></label></div><p class="hint">Checklist ini hanya untuk latihan alur monitoring dan tidak menggantikan berita acara pemeriksaan.</p><div class="innovation-scene scene-pour"><div class="scene-lines"></div><div class="scene-object"></div><div class="scene-marker"></div><div class="scene-caption">SIMULASI PROSES · SMART POUR SCHEDULING</div></div></article></div>
 <article class="panel"><div class="panel-title"><h3>Riwayat Pembacaan Simulasi</h3><span class="muted small">Data contoh operasional, bukan catatan lapangan</span></div><div class="table-wrap"><table><thead><tr><th>Waktu simulasi</th><th>Waktu tunggu truk</th><th>Ambang</th><th>Status</th></tr></thead><tbody id="history-pour"></tbody></table></div></article></section><section class="page hidden" id="page-cctv">
-          <div class="section-head"><div><h2>Monitoring CCTV & Smart PPE</h2><p class="muted">Simulasi visual seluruh zona dan panel untuk koneksi kamera fisik di masa depan.</p></div><span class="pill warn">Perlu koneksi kamera</span></div>
-          <article class="panel zone-monitor"><div class="panel-title"><h3>Smart PPE Vision · Monitoring 12 Zona</h3><span class="pill gold">SIMULASI DIGITAL · BUKAN CCTV LANGSUNG</span></div>
-<p class="muted small">Model animasi seperti dashboard K3: pekerja bergerak, kotak deteksi APD, peringatan dan statistik per kamera. Seluruh data dibuat secara sintetis.</p>
-<div class="ppe-summary"><div><small>Zona dipantau</small><b id="ppeZoneCount">12</b></div><div><small>Pekerja simulasi</small><b id="ppeWorkerCount">96</b></div><div><small>APD lengkap</small><b id="ppeCompliant">—</b></div><div><small>Peringatan simulasi</small><b id="ppeAlerts">—</b></div></div>
-<div class="ppe-controls"><label>Filter zona <select id="ppeZoneFilter"><option value="all">Semua 12 Zona</option></select></label><label><input type="checkbox" id="ppeAnimate" checked> Jalankan animasi</label><button type="button" class="btn btn-outline btn-small" id="ppeRefresh">Perbarui skenario</button></div>
+<div class="section-head"><div><h2>Monitoring K3 & Smart PPE</h2><p class="muted">Pemantauan pergerakan dan kepatuhan APD di 12 zona proyek.</p></div><span class="pill gold">DATA VIRTUAL · DEMO</span></div>
+<article class="panel zone-monitor">
+<div class="panel-title"><h3>Pemantauan Pekerja per Zona</h3><span class="pill gold">12 ZONA</span></div>
+<div class="ppe-summary"><div><small>Zona dipantau</small><b id="ppeZoneCount">12</b></div><div><small>Pekerja terpantau</small><b id="ppeWorkerCount">96</b></div><div><small>APD lengkap</small><b id="ppeCompliant">—</b></div><div><small>Peringatan aktif</small><b id="ppeAlerts">—</b></div></div>
+<div class="ppe-controls"><label>Zona <select id="ppeZoneFilter"><option value="all">Semua Zona</option></select></label><label><input type="checkbox" id="ppeAnimate" checked> Gerakan aktif</label><button type="button" class="btn btn-outline btn-small" id="ppeRefresh">Perbarui kondisi</button></div>
 <div class="ppe-camera-grid" id="ppeCameraGrid"></div>
-<div class="panel" style="margin-top:16px"><h3>Log Peringatan K3 · Simulasi</h3><div class="table-wrap"><table><thead><tr><th>Waktu simulasi</th><th>Zona</th><th>Pekerja</th><th>Temuan</th></tr></thead><tbody id="ppeAlertLog"></tbody></table></div></div>
-<p class="hint">Kotak hijau = APD lengkap; merah = item APD simulasi tidak lengkap. Tidak ada kamera fisik atau model computer vision yang dijalankan. Simulasi ini bukan bukti kepatuhan K3 di lapangan.</p>
 </article>
-<div class="grid-two align-start">
-            <article class="panel"><h3>Kamera Fisik (Opsional)</h3><label>URL stream kamera<input id="cameraUrl" placeholder="URL stream HLS / MP4 / gateway kamera"></label><div class="video-frame"><video id="cameraVideo" controls muted playsinline></video><div id="cameraPlaceholder">▣<b>Belum ada stream CCTV</b><small>Masukkan URL stream yang dapat diakses browser.</small></div></div><button id="connectCamera" class="btn btn-primary full">Hubungkan Kamera</button><p class="hint">Browser umumnya tidak dapat memutar RTSP secara langsung. Gunakan gateway kamera ke HLS/WebRTC/MP4 dengan autentikasi yang aman.</p></article>
-            <article class="panel"><h3>Smart PPE · Deteksi & Kejadian</h3><div class="ppe-status"><div><span class="ppe-icon">⛑</span><div><b>Monitoring APD</b><small>Menunggu integrasi AI / video analytics</small></div></div><span class="pill muted">Standby</span></div><div class="ppe-grid"><div><span>Deteksi helm</span><b>—</b></div><div><span>Rompi keselamatan</span><b>—</b></div><div><span>Area terpantau</span><b>—</b></div></div><p class="hint">Deteksi pergerakan dan kepatuhan APD memerlukan model computer vision, server pemroses video, serta kamera yang diizinkan. Halaman ini disiapkan sebagai panel penerima event, bukan mengklaim AI sudah aktif.</p></article>
-          </div>
-          <article class="panel"><div class="panel-title"><h3>Log Event CCTV / Smart PPE</h3><span class="muted small">Data event dari sistem kamera</span></div><div class="table-wrap"><table><thead><tr><th>Waktu</th><th>Kamera / Zona</th><th>Event</th><th>Kepercayaan</th><th>Status</th></tr></thead><tbody id="cctvEvents"><tr><td colspan="5" class="empty">Belum ada event CCTV.</td></tr></tbody></table></div></article>
-        </section>
+<article class="panel"><div class="panel-title"><h3>Smart PPE · Deteksi & Kejadian</h3><span class="pill gold">ANALISIS DATA VIRTUAL</span></div><div class="ppe-summary"><div><small>Helm terdeteksi</small><b id="ppeHelmets">—</b></div><div><small>Rompi terdeteksi</small><b id="ppeVests">—</b></div><div><small>Sepatu terdeteksi</small><b id="ppeShoes">—</b></div><div><small>Insiden APD</small><b id="ppeIncidentCount">—</b></div></div><div class="table-wrap"><table><thead><tr><th>Waktu</th><th>Zona</th><th>Pekerja</th><th>Deteksi / Kejadian</th><th>Status</th></tr></thead><tbody id="ppeAlertLog"></tbody></table></div></article>
+<article class="panel"><div class="panel-title"><h3>Log Event K3</h3><span class="muted small">Riwayat kejadian pada sesi ini · Data virtual</span></div><div class="table-wrap"><table><thead><tr><th>Waktu</th><th>Kamera / Zona</th><th>Event</th><th>Kepercayaan</th><th>Status</th></tr></thead><tbody id="cctvEvents"></tbody></table></div></article>
+</section>
 
         <section class="page hidden" id="page-organization">
           <div class="section-head"><div><h2>Struktur Organisasi & Hak Input</h2><p class="muted">Pilihan nama pada form laporan diambil dari daftar personel proyek.</p></div><button class="btn btn-outline" id="exportBtn">Ekspor CSV Laporan</button></div>
