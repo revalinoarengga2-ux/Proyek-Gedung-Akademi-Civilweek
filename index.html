@@ -122,11 +122,11 @@ tr:hover td{background:#fffaf0}
             <button class="btn btn-primary full" type="submit">Masuk ke Dashboard</button>
             <div id="loginMessage" class="form-message"></div>
           </form>
-          <small class="muted">Akun dibuat oleh administrator melalui Supabase Authentication.</small>
+          <button id="guestLoginBtn" type="button" class="btn btn-outline full" style="margin:4px 0 14px">Masuk sebagai Guest · Viewer</button><small class="muted">Guest hanya melihat data demo. Akun personel dibuat melalui Supabase Authentication.</small>
         </div>
       </section>
 
-      <section id="appView" class="hidden">
+      <section id="appView" class="hidden"><div id="guestBanner" class="hidden" style="padding:12px 16px;margin-bottom:16px;background:#fff2ce;border:1px solid #e7c36d;border-radius:12px;font-size:12px">Mode Guest · Viewer — tampilan demo, tanpa akses ke laporan dan data internal proyek.</div>
         <div class="welcome-row">
           <div><div class="eyebrow">PROJECT FIELD MONITORING</div><h1>Dashboard Monitoring</h1><p class="muted">Pembangunan Gedung Akademi Civilweek · Surakarta, Jawa Tengah</p></div>
           <div class="user-chip"><span class="avatar" id="userInitial">U</span><div><b id="userName">Pengguna</b><small id="userRole">Jabatan</small></div></div>
@@ -157,7 +157,7 @@ tr:hover td{background:#fffaf0}
         </section>
 
         <section class="page hidden" id="page-reports">
-          <div class="section-head"><div><h2>Pelaporan Lapangan</h2><p class="muted">Form responsif untuk pekerja, pelaksana, dan pengawas melalui HP.</p></div></div>
+          <div class="section-head"><div><h2>Pelaporan Lapangan</h2><p class="muted">Form responsif untuk pekerja, pelaksana, dan pengawas melalui HP.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="reportCsvBtn" class="btn btn-outline btn-small" type="button">Ekspor CSV</button><button id="reportPdfBtn" class="btn btn-primary btn-small" type="button">Cetak / Simpan PDF</button></div></div>
           <div class="grid-two align-start">
             <article class="panel">
               <h3>Buat Laporan Baru</h3>
@@ -260,7 +260,7 @@ tr:hover td{background:#fffaf0}
 </section>
 
         <section class="page hidden" id="page-organization">
-          <div class="section-head"><div><h2>Struktur Organisasi & Hak Input</h2><p class="muted">Pilihan nama pada form laporan diambil dari daftar personel proyek.</p></div><button class="btn btn-outline" id="exportBtn">Ekspor CSV Laporan</button></div>
+          <div class="section-head"><div><h2>Struktur Organisasi & Hak Input</h2><p class="muted">Pilihan nama pada form laporan diambil dari daftar personel proyek.</p></div></div>
           <div class="org-grid" id="orgGrid"></div>
           <article class="panel"><h3>Catatan Pengaturan Akun</h3><p class="muted">Administrator menambahkan akun melalui Supabase Authentication, lalu mengisi nama, jabatan, dan role pada tabel <code>profiles</code>. Pengguna lapangan dapat mengirim laporan; pengawas/manager dapat memeriksa dan memperbarui status sesuai kebijakan akses.</p></article>
         </section>
@@ -283,6 +283,6 @@ tr:hover td{background:#fffaf0}
  },9000);
 })();
 </script>
-  <script type="module" src="./app.js?v=20261123-fix3"></script>
+  <script type="module" src="./app.js?v=20261123-guest-export"></script>
 </body>
 </html>
