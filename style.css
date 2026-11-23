@@ -92,3 +92,8 @@ tr:hover td{background:#fffaf0}
 .ppe-shadow{position:absolute;left:5px;bottom:-3px;width:25px;height:6px;border-radius:50%;background:#29272055;filter:blur(2px)}
 .ppe-detection{z-index:3;pointer-events:none}
 .ppe-issue{z-index:4}
+
+
+.pour-road{position:relative;height:230px;overflow:hidden;border-radius:13px;background:linear-gradient(#e1e8eb 0 47%,#999d95 48% 52%,#5e6266 53% 100%);border:1px solid #dfd6c3}
+.pour-road-line{position:absolute;bottom:17%;left:4%;width:92%;border-top:4px dashed #f4d278}.pour-pump{position:absolute;left:4%;top:15%;z-index:2;border:3px solid #d99b00;background:#f7c54e;padding:13px;border-radius:9px;font-size:12px;font-weight:800;text-align:center}
+.pour-truck-scene{position:absolute;inset:0}.pour-truck{position:absolute;display:grid;justify-items:center;gap:2px;transition:left 1s linear;font-size:30px;z-index:3}.pour-truck small{font-size:9px;color:#fff;background:#28343b;border-radius:4px;padding:2px 4px}
