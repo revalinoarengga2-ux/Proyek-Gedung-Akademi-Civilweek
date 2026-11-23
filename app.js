@@ -191,7 +191,7 @@ $("guestLoginBtn").addEventListener("click",()=>{
  $("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
  $("guestBanner").classList.remove("hidden");$("userName").textContent="Guest";$("userRole").textContent="Viewer · Demo";$("userInitial").textContent="G";
  document.querySelector('[data-page="reports"]').classList.add("hidden");
- $("addWorkBtn").classList.add("hidden");
+ $("addWorkBtn").classList.add("hidden");$("progressForm").closest("article").classList.add("hidden");
  $("refreshBtn").textContent="↻ Perbarui Tampilan";
  renderWorkTable();renderWeeklyCurveTable();updateStats();drawCurves();renderOrg();
  $("statReports").textContent="—";$("statOpen").textContent="—";$("recentList").innerHTML='<div class="empty">Laporan internal hanya tersedia bagi akun proyek.</div>';
