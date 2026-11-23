@@ -192,7 +192,7 @@ tr:hover td{background:#fffaf0}
             <article class="stat"><span>Progres Realisasi Kumulatif</span><b id="curveActual">0%</b></article>
             <article class="stat"><span>Deviasi</span><b id="curveDeviation">0%</b></article>
           </div>
-          <article class="panel chart-panel"><div class="panel-title"><h3>Grafik Kurva S · 33 Minggu</h3><div class="legend"><span><i class="dot plan"></i>Rencana</span><span><i class="dot actual"></i>Realisasi</span></div></div><canvas id="mainCurve" height="300"></canvas></article>
+          <div class="stats compact"><article class="stat"><span>Indeks Kinerja Jadwal (SPI*)</span><b id="curveSpi">—</b><small>Rasio progres aktual / rencana</small></article><article class="stat"><span>Status jadwal</span><b id="curveScheduleStatus">Belum ada data</b><small>Evaluasi pada minggu terakhir terlapor</small></article><article class="stat"><span>Periode evaluasi</span><b id="curveEvalWeek">—</b><small>Minggu terakhir dengan realisasi</small></article></div><article class="panel" style="margin-bottom:18px"><div class="panel-title"><h3>Analisis Kinerja & Proyeksi</h3><span class="pill gold">BERDASARKAN DATA AKTUAL</span></div><p id="curveAnalysis" class="hint">Masukkan realisasi kumulatif untuk melihat analisis.</p><p class="hint">*SPI merupakan rasio progres fisik, bukan SPI Earned Value resmi. CPI, EAC, dan proyeksi biaya belum dihitung karena data anggaran dan biaya aktual belum tersedia.</p></article><article class="panel chart-panel"><div class="panel-title"><h3>Grafik Kurva S · 33 Minggu</h3><div class="legend"><span><i class="dot plan"></i>Rencana</span><span><i class="dot actual"></i>Realisasi</span></div></div><canvas id="mainCurve" height="300"></canvas></article>
           <div class="grid-two align-start">
             <article class="panel">
               <h3>Input Realisasi Kumulatif Proyek</h3>
@@ -208,7 +208,7 @@ tr:hover td{background:#fffaf0}
               </form>
             </article>
             <article class="panel">
-              <div class="panel-title"><h3>Perbandingan Kumulatif Mingguan</h3><span class="pill gold">33 MINGGU</span></div><p class="hint">Rencana kumulatif dan realisasi kumulatif per minggu. — berarti belum ada input realisasi.</p><div class="table-wrap"><table><thead><tr><th>Minggu</th><th>Rencana Kumulatif</th><th>Realisasi Kumulatif</th></tr></thead><tbody id="weeklyCurveTable"></tbody></table></div><details class="work-appendix"><summary>Lampiran · Bobot 34 Pekerjaan</summary><div class="panel-title"><h3>Bobot Pekerjaan</h3><button class="btn btn-outline btn-small" id="addWorkBtn">+ Tambah pekerjaan</button></div><p id="workLoadStatus" class="hint">Memuat pekerjaan…</p><div class="table-wrap"><table><thead><tr><th>Pekerjaan</th><th>Bobot Rencana</th></tr></thead><tbody id="workTable"></tbody></table></div></details><p class="hint">Perbandingan Kurva S menggunakan persentase kumulatif rencana dan realisasi per minggu. Bobot tiap pekerjaan tetap menjadi dasar perhitungan realisasi.</p>
+              <div class="panel-title"><h3>Perbandingan Kumulatif Mingguan</h3><span class="pill gold">33 MINGGU</span></div><p class="hint">Rencana kumulatif dan realisasi kumulatif per minggu. — berarti belum ada input realisasi.</p><div class="table-wrap"><table><thead><tr><th>Minggu</th><th>Rencana Kumulatif</th><th>Realisasi Kumulatif</th><th>Deviasi</th><th>Status</th></tr></thead><tbody id="weeklyCurveTable"></tbody></table></div><details class="work-appendix"><summary>Lampiran · Bobot 34 Pekerjaan</summary><div class="panel-title"><h3>Bobot Pekerjaan</h3><button class="btn btn-outline btn-small" id="addWorkBtn">+ Tambah pekerjaan</button></div><p id="workLoadStatus" class="hint">Memuat pekerjaan…</p><div class="table-wrap"><table><thead><tr><th>Pekerjaan</th><th>Bobot Rencana</th></tr></thead><tbody id="workTable"></tbody></table></div></details><p class="hint">Perbandingan Kurva S menggunakan persentase kumulatif rencana dan realisasi per minggu. Bobot tiap pekerjaan tetap menjadi dasar perhitungan realisasi.</p>
             </article>
           </div>
         </section>
@@ -284,6 +284,6 @@ tr:hover td{background:#fffaf0}
  },9000);
 })();
 </script>
-  <script type="module" src="./app.js?v=20261123-lps-plus"></script>
+  <script type="module" src="./app.js?v=20261123-curve-evm"></script>
 </body>
 </html>
