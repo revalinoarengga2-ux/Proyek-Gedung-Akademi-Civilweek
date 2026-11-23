@@ -246,7 +246,26 @@ function updateStats(){
  $("curvePlan").textContent=fmtPct(p);$("curveActual").textContent=fmtPct(a);$("curveDeviation").textContent=(a-p>=0?"+":"")+fmtPct(a-p);
 }
 function renderWorkTable(){ $("workTable").innerHTML=workItems.map(w=>`<tr><td>${esc(w.name)}</td><td>${fmtPct(w.weight_percent)}</td></tr>`).join("")||'<tr><td colspan="2">Belum ada pekerjaan.</td></tr>';updateStats(); }
-function renderWeeklyCurveTable(){const el=$("weeklyCurveTable");if(!el)return;const map=new Map(weeklyProgress.map(r=>[r.period,Number(r.actual_cumulative)]));el.innerHTML=activeBaseline().map((r,i)=>`<tr><td>Minggu ${i+1}</td><td>${fmtPct(r.planned_cumulative)}</td><td><b>${map.has(r.period)?fmtPct(map.get(r.period)):"—"}</b></td></tr>`).join("");}
+function curvePerformance(){
+ const baseline=activeBaseline(),planMap=new Map(baseline.map(x=>[x.period,Number(x.planned_cumulative)]));
+ const actualRows=weeklyProgress.filter(r=>planMap.has(r.period)&&Number.isFinite(Number(r.actual_cumulative))).sort((a,b)=>a.period.localeCompare(b.period));
+ const latest=actualRows.at(-1);
+ if(!latest){$("curveSpi").textContent="—";$("curveScheduleStatus").textContent="Belum ada data";$("curveEvalWeek").textContent="—";$("curveAnalysis").textContent="Belum ada realisasi kumulatif yang diinput. Analisis jadwal belum dapat dilakukan.";return;}
+ const week=baseline.findIndex(x=>x.period===latest.period)+1,plan=planMap.get(latest.period),actual=Number(latest.actual_cumulative),delta=actual-plan,spi=plan>0?actual/plan:null;
+ const status=Math.abs(delta)<.005?"Sesuai rencana":delta<0?"Terlambat":"Lebih cepat";
+ $("curveSpi").textContent=spi===null?"—":spi.toFixed(2);$("curveScheduleStatus").textContent=status;$("curveEvalWeek").textContent="Minggu "+week;
+ $("curveAnalysis").textContent="Minggu "+week+": rencana kumulatif "+plan.toFixed(2)+"%, realisasi "+actual.toFixed(2)+"%, deviasi "+(delta>=0?"+":"")+delta.toFixed(2)+" poin persentase. "+(delta<-.005?"Progres berada di bawah rencana; perlu evaluasi penyebab dan tindakan korektif.":delta>.005?"Progres berada di atas rencana; periksa keberlanjutan sumber daya dan mutu.":"Realisasi sesuai dengan rencana pada minggu evaluasi.")+" Analisis tidak menggantikan verifikasi lapangan.";
+}
+function renderWeeklyCurveTable(){
+ const el=$("weeklyCurveTable");if(!el)return;
+ const map=new Map(weeklyProgress.map(r=>[r.period,Number(r.actual_cumulative)]));
+ el.innerHTML=activeBaseline().map((r,i)=>{
+ const planned=Number(r.planned_cumulative),actual=map.get(r.period),has=map.has(r.period),delta=has?actual-planned:null;
+ const status=!has?"Belum dilaporkan":Math.abs(delta)<.005?"Sesuai":delta<0?"Terlambat":"Lebih cepat";
+ return `<tr><td>Minggu ${i+1}</td><td>${fmtPct(planned)}</td><td><b>${has?fmtPct(actual):"—"}</b></td><td>${has?(delta>=0?"+":"")+delta.toFixed(2)+" pp":"—"}</td><td>${status}</td></tr>`;
+ }).join("");
+ curvePerformance();
+}
 function weightedActualAt(period){
  return workItems.reduce((sum,w)=>{
   const rows=progressRows.filter(p=>p.work_item_id===w.id && p.period<=period);
