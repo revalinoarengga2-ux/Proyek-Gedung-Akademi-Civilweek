@@ -148,7 +148,16 @@ function drawOne(canvasId){
  ctx.font="11px DM Sans";ctx.strokeStyle="#e9e5dc";ctx.fillStyle="#777";
  for(let i=0;i<=5;i++){let y=pad.t+ch*i/5;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.stroke();ctx.fillText(`${100-i*20}%`,4,y+4);}
  const periods=[...new Set([...baselineRows.map(x=>x.period),...progressRows.map(x=>x.period)])].sort();
- if(!periods.length){ctx.fillStyle="#999";ctx.textAlign="center";ctx.fillText("Input baseline dan realisasi untuk membentuk Kurva S",width/2,height/2);ctx.textAlign="left";return;}
+ if(!periods.length){
+  const demo=[0,1,3,6,10,16,23,32,42,52,63,73,81,88,93,97,100];
+  ctx.font="bold 12px DM Sans";ctx.fillStyle="#8a5a00";ctx.textAlign="center";
+  ctx.fillText("SIMULASI RENCANA • BUKAN BASELINE RESMI",width/2,12);
+  ctx.beginPath();demo.forEach((v,i)=>{const x=pad.l+cw*i/(demo.length-1),y=pad.t+ch*(1-v/100);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.strokeStyle="#d99400";ctx.lineWidth=3;ctx.stroke();
+  ctx.font="11px DM Sans";ctx.fillStyle="#777";
+  [0,4,8,12,16].forEach(i=>ctx.fillText("M"+i,pad.l+cw*i/16,height-9));
+  ctx.textAlign="left";return;
+ }
  const planMap=new Map(baselineRows.map(x=>[x.period,Number(x.planned_cumulative)]));
  const plan=periods.map(p=>planMap.has(p)?planMap.get(p):null);
  const actual=periods.map(p=>weightedActualAt(p));
