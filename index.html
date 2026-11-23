@@ -186,26 +186,13 @@ tr:hover td{background:#fffaf0}
         <section class="page hidden" id="page-curve">
           <div class="section-head"><div><h2>Kurva S Rencana & Realisasi</h2><p class="muted">Kurva rencana 33 minggu dan realisasi berdasarkan progres pekerjaan.</p></div></div>
           <div class="stats compact">
-            <article class="stat"><span>Total Bobot Rencana Pekerjaan</span><b id="weightTotal">0%</b></article>
+            
             <article class="stat"><span>Progres Rencana Kumulatif</span><b id="curvePlan">0%</b></article>
             <article class="stat"><span>Progres Realisasi Kumulatif</span><b id="curveActual">0%</b></article>
             <article class="stat"><span>Deviasi</span><b id="curveDeviation">0%</b></article>
           </div>
           <article class="panel chart-panel"><div class="panel-title"><h3>Grafik Kurva S · 33 Minggu</h3><div class="legend"><span><i class="dot plan"></i>Rencana</span><span><i class="dot actual"></i>Realisasi</span></div></div><canvas id="mainCurve" height="300"></canvas></article>
           <div class="grid-two align-start">
-            <article class="panel">
-              <h3>Input Baseline Kurva S</h3>
-              <form id="baselineForm" class="stack">
-                <div class="form-grid">
-                  <label>Periode (urut ISO)<input id="baselinePeriod" placeholder="Contoh: 2026-W48" required></label>
-                  <label>Rencana kumulatif proyek (%)<input id="baselinePercent" type="number" min="0" max="100" step="0.01" required></label>
-                </div>
-                <button class="btn btn-outline" type="submit">Simpan Titik Rencana</button>
-                <div id="baselineMessage" class="form-message"></div>
-              </form>
-              <div class="table-wrap"><table><thead><tr><th>Periode</th><th>Rencana kumulatif</th></tr></thead><tbody id="baselineTable"></tbody></table></div>
-              <p class="hint">Kurva 33 minggu awal adalah rekonstruksi perkiraan dari gambar jadwal yang dikirim, bukan transkripsi angka resmi. Baseline tersimpan di Supabase tetap diprioritaskan jika tersedia. Untuk nilai mingguan yang presisi, gunakan tabel sumber Excel.</p>
-            </article>
             <article class="panel">
               <h3>Input Realisasi Pekerjaan</h3>
               <form id="progressForm" class="stack">
@@ -222,7 +209,7 @@ tr:hover td{background:#fffaf0}
             <article class="panel">
               <div class="panel-title"><h3>Daftar Bobot & Progres</h3><button class="btn btn-outline btn-small" id="addWorkBtn">+ Tambah pekerjaan</button></div>
               <p id="workLoadStatus" class="hint" role="status">Memuat daftar pekerjaan dari Supabase…</p><div class="table-wrap"><table><thead><tr><th>Pekerjaan</th><th>Rencana</th><th>Realisasi</th></tr></thead><tbody id="workTable"></tbody></table></div>
-              <p class="hint">Bobot rencana seluruh pekerjaan berjumlah 100%. Progres rencana kumulatif per minggu memerlukan jadwal pelaksanaan/baseline yang disetujui. Realisasi merupakan persentase penyelesaian masing-masing pekerjaan.</p>
+              <p class="hint">Perbandingan Kurva S menggunakan persentase kumulatif rencana dan realisasi per minggu. Bobot tiap pekerjaan tetap menjadi dasar perhitungan realisasi.</p>
             </article>
           </div>
         </section>
@@ -270,8 +257,8 @@ tr:hover td{background:#fffaf0}
 <div class="ppe-controls"><label>Zona <select id="ppeZoneFilter"><option value="all">Semua Zona</option></select></label><label><input type="checkbox" id="ppeAnimate" checked> Gerakan aktif</label><button type="button" class="btn btn-outline btn-small" id="ppeRefresh">Perbarui kondisi</button></div>
 <div class="ppe-camera-grid" id="ppeCameraGrid"></div>
 </article>
-<article class="panel"><div class="panel-title"><h3>Smart PPE · Deteksi & Kejadian</h3><span class="pill gold">ANALISIS DATA VIRTUAL</span></div><div class="ppe-summary"><div><small>Helm terdeteksi</small><b id="ppeHelmets">—</b></div><div><small>Rompi terdeteksi</small><b id="ppeVests">—</b></div><div><small>Sepatu terdeteksi</small><b id="ppeShoes">—</b></div><div><small>Insiden APD</small><b id="ppeIncidentCount">—</b></div></div><div class="table-wrap"><table><thead><tr><th>Waktu</th><th>Zona</th><th>Pekerja</th><th>Deteksi / Kejadian</th><th>Status</th></tr></thead><tbody id="ppeAlertLog"></tbody></table></div></article>
-<article class="panel"><div class="panel-title"><h3>Log Event K3</h3><span class="muted small">Riwayat kejadian pada sesi ini · Data virtual</span></div><div class="table-wrap"><table><thead><tr><th>Waktu</th><th>Kamera / Zona</th><th>Event</th><th>Kepercayaan</th><th>Status</th></tr></thead><tbody id="cctvEvents"></tbody></table></div></article>
+<article class="panel"><div class="panel-title"><h3>Smart PPE · Ringkasan Deteksi</h3><span class="pill gold">ANALISIS DATA VIRTUAL</span></div><div class="ppe-summary"><div><small>Helm terdeteksi</small><b id="ppeHelmets">—</b></div><div><small>Rompi terdeteksi</small><b id="ppeVests">—</b></div><div><small>Sepatu terdeteksi</small><b id="ppeShoes">—</b></div><div><small>Insiden APD</small><b id="ppeIncidentCount">—</b></div></div></article>
+<article class="panel"><div class="panel-title"><h3>Deteksi, Kejadian & Log Event K3</h3><span class="muted small">Riwayat kejadian pada sesi ini · Data virtual</span></div><div class="table-wrap"><table><thead><tr><th>Waktu</th><th>Kamera / Zona</th><th>Event</th><th>Kepercayaan</th><th>Status</th></tr></thead><tbody id="cctvEvents"></tbody></table></div></article>
 </section>
 
         <section class="page hidden" id="page-organization">
