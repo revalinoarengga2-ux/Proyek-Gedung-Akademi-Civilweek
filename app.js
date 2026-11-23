@@ -237,12 +237,18 @@ const activityResetKey="civilweek-activity-reset-cutoff-v1";
 let activityResetCutoff=localStorage.getItem(activityResetKey)||"";
 function resetLocalActivity(){
  if(isGuest)return;
- if(!confirm("Reset tampilan aktivitas lokal dan catatan inovasi sebelumnya di browser ini? Laporan resmi Supabase tidak akan dihapus."))return;
- activityResetCutoff=new Date().toISOString();
- try{localStorage.setItem(activityResetKey,activityResetCutoff);}catch(e){console.warn("Reset lokal tidak dapat dipersistenkan",e);}
- virtualK3Reports.length=0;try{sessionStorage.removeItem("civilweek-k3-events");}catch(e){}
- renderReports();
- alert("Aktivitas lokal sebelumnya disembunyikan dari Ringkasan dan Laporan Terpusat. Laporan Supabase tetap tersimpan.");
+ const approved=confirm("RESET SEMUA DATA LOKAL?\\n\\nIni menghapus catatan manual Rapid-Cycle dan Smart Pour, LPS, constraint, checklist lama, dan riwayat K3 virtual pada browser ini. Data Supabase, akun, dan Kurva S resmi TIDAK dihapus. Simulasi virtual akan mulai lagi setelah halaman dimuat ulang.");
+ if(!approved)return;
+ const verify=prompt('Ketik RESET untuk mengonfirmasi penghapusan semua data lokal:');
+ if(verify!=="RESET"){alert("Reset dibatalkan. Tidak ada data yang dihapus.");return;}
+ const localKeys=["civilweek-manual-innovation-v1","civilweek-lps-weekly-v1","civilweek-constraints-v1","civilweek-checklist-v2","civilweek-activity-reset-cutoff-v1"];
+ const sessionKeys=["civilweek-k3-events"];
+ try{
+  localKeys.forEach(k=>localStorage.removeItem(k));
+  sessionKeys.forEach(k=>sessionStorage.removeItem(k));
+ }catch(e){alert("Reset gagal: penyimpanan browser tidak dapat diakses. "+e.message);return;}
+ alert("Data lokal berhasil direset. Halaman akan dimuat ulang. Data Supabase tetap aman.");
+ window.location.reload();
 }
 $("resetRecentBtn").addEventListener("click",resetLocalActivity);
 $("resetReportsBtn").addEventListener("click",resetLocalActivity);
