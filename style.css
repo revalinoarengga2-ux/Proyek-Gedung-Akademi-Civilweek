@@ -50,3 +50,23 @@ tr:hover td{background:#fffaf0}
 @keyframes cameraScan{0%{top:0}100%{top:100%}}@keyframes craneHook{0%{height:25px}100%{height:75px}}
 @media(max-width:1000px){.zone-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.zone-grid{grid-template-columns:1fr}.zone-scene{height:190px}}
 @media(prefers-reduced-motion:reduce){.zone-worker,.zone-scan,.zone-crane:after{animation:none}}
+
+
+.innovation-note{padding:15px 18px;background:#fff4d7;border:1px solid #eacb7e;border-radius:13px;margin-bottom:18px;color:#6e4a07;font-size:12px}
+.innovation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.innovation-card{min-width:0}.innovation-card-head{display:flex;align-items:center;gap:12px}.innovation-card-head h3{margin:0;font-size:16px}.innovation-card-head small{font-size:11px;color:#777}.innovation-card-head .pill{margin-left:auto}.innovation-symbol{width:44px;height:44px;display:grid;place-items:center;border-radius:50%;background:#ffb400;color:#222;font-size:27px;font-weight:800;flex:none}
+.innovation-scene{height:166px;position:relative;border-radius:13px;overflow:hidden;background:linear-gradient(#f4f8fa,#e9d7a7);border:1px solid #e7d3a7;margin:15px 0}
+.scene-lines{position:absolute;inset:12px;background:repeating-linear-gradient(90deg,transparent 0 36px,#9b947b30 37px 38px),repeating-linear-gradient(0deg,transparent 0 28px,#9b947b30 29px 30px)}
+.scene-object{position:absolute;left:18%;top:26%;height:57%;width:64%;border:7px solid #bd8c24;border-radius:5px;box-shadow:inset 0 0 0 7px #ffffff99;animation:innovationPulse 3s ease-in-out infinite alternate}
+.scene-marker{position:absolute;top:20%;left:12%;height:65%;width:8px;background:#f9ae00;animation:innovationTravel 5s ease-in-out infinite alternate}
+.scene-caption{position:absolute;left:8px;bottom:7px;background:#242c31e6;color:#fff;font-size:9px;font-weight:800;padding:5px 8px;border-radius:5px;letter-spacing:.3px}
+.scene-mag .scene-object{background:repeating-linear-gradient(0deg,transparent 0 15px,#6d7880 16px 20px);border-color:#b8a49b}
+.scene-form .scene-object{background:repeating-linear-gradient(90deg,#e9c36a 0 25%,#e3b34c 25% 50%);border-color:#ad7b18}
+.scene-excavate .scene-object{top:20%;height:70%;border:0;border-left:8px solid #777;border-right:8px solid #777;background:repeating-linear-gradient(0deg,#b18a5d 0 20%,#ead2a7 21% 26%);box-shadow:none}
+.scene-pour .scene-object{height:42%;top:33%;border:3px solid #d8a021;background:repeating-linear-gradient(90deg,#f6bf4a 0 23%,#d89b12 24% 25%);border-radius:24px}
+.innovation-meter{display:flex;justify-content:space-between;gap:12px;font-size:12px}.innovation-meter strong{color:#936000}
+.innovation-card input[type=range]{accent-color:#ffb400;padding:0;margin:12px 0}.innovation-step{font-size:13px;font-weight:800;color:#2f3436;background:#fff4d7;border-radius:8px;padding:10px;margin-bottom:12px}
+.innovation-checks{display:grid;gap:8px;font-size:12px}.innovation-checks>div{display:flex;align-items:center;gap:8px}.innovation-check{color:#a7a7a7;font-size:17px}.innovation-check.done{color:#1c8857}
+.innovation-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:16px}
+@keyframes innovationPulse{from{filter:brightness(.92);transform:translateY(3px)}to{filter:brightness(1.1);transform:translateY(-3px)}}@keyframes innovationTravel{from{left:12%}to{left:83%}}
+@media(max-width:800px){.innovation-grid{grid-template-columns:1fr}}@media(prefers-reduced-motion:reduce){.scene-object,.scene-marker{animation:none}}
