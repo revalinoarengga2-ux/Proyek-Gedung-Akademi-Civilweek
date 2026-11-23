@@ -183,7 +183,7 @@ function renderLps(){
  const weekFilter=$("lpsFilterWeek").value,statusFilter=$("lpsFilterStatus").value;
  $("lpsTable").innerHTML=lpsRecords.filter(r=>(weekFilter==="all"||String(r.week)===weekFilter)&&(statusFilter==="all"||r.status===statusFilter)).slice().reverse().map(r=>'<tr><td>Minggu '+r.week+'</td><td>'+esc(r.task)+'</td><td>'+esc(r.owner)+'</td><td>'+esc(r.status)+'</td><td>'+esc(r.constraint||"—")+'</td><td>'+(isGuest?"Viewer":'<button class="btn btn-outline btn-small" data-lps-id="'+esc(r.id)+'" type="button">Ubah status</button>')+'</td></tr>').join("")||'<tr><td colspan="6">Belum ada rencana mingguan.</td></tr>';
  $("lpsForm").querySelectorAll("input,select,button").forEach(el=>el.disabled=isGuest);
- renderLpsExtras();renderOwnerOverview();
+ renderLpsExtras();
 }
 const constraintKey="civilweek-constraints-v1";let constraintRecords=[];
 try{const v=JSON.parse(localStorage.getItem(constraintKey)||"[]");if(Array.isArray(v))constraintRecords=v.slice(-200);}catch(e){console.warn("Constraints:",e);}
