@@ -111,19 +111,23 @@ async function loadProgress(){
 async function loadBaseline(){
  const {data,error}=await db.from("s_curve_baseline").select("*").order("period");
  if(error){console.warn(error);return;} baselineRows=data||[];
- $("baselineTable").innerHTML=baselineRows.map(r=>`<tr><td>${esc(r.period)}</td><td>${fmtPct(r.planned_cumulative)}</td></tr>`).join("")||'<tr><td colspan="2" class="empty">Baseline periode belum diinput.</td></tr>';
+ $("baselineTable").innerHTML=activeBaseline().map(r=>`<tr><td>${esc(r.period)}</td><td>${fmtPct(r.planned_cumulative)}</td></tr>`).join("")||'<tr><td colspan="2" class="empty">Baseline periode belum diinput.</td></tr>';
  drawCurves();
 }
 function renderReports(){
- $("statReports").textContent=reports.length;
- $("statOpen").textContent=reports.filter(r=>!["Selesai","Ditutup"].includes(r.status)).length;
- $("reportsTable").innerHTML=reports.length?reports.map(r=>`<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.reporter_name)}</td><td>${esc(r.report_type)}</td><td>${esc(r.location)}</td><td><span class="pill ${r.status==="Selesai"?"success":"warn"}">${esc(r.status||"Baru")}</span></td></tr>`).join(""):`<tr><td colspan="5" class="empty">Belum ada laporan.</td></tr>`;
- $("recentList").innerHTML=reports.slice(0,6).map(r=>`<div class="activity"><span class="activity-dot"></span><div><b>${esc(r.report_type)} · ${esc(r.location)}</b><small>${esc(r.reporter_name)} · ${fmtDate(r.created_at)}</small><p>${esc(r.description||"").slice(0,110)}</p></div></div>`).join("")||'<div class="empty">Belum ada laporan.</div>';
+ const allReports=[...virtualK3Reports,...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ $("statReports").textContent=allReports.length;
+ $("statOpen").textContent=allReports.filter(r=>!["Selesai","Ditutup"].includes(r.status)).length;
+ $("reportsTable").innerHTML=allReports.length?allReports.map(r=>`<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.reporter_name)}</td><td>${esc(r.report_type)}</td><td>${esc(r.location)}</td><td><span class="pill ${r.status==="Selesai"?"success":"warn"}">${esc(r.status||"Baru")}</span></td></tr>`).join(""):`<tr><td colspan="5" class="empty">Belum ada laporan.</td></tr>`;
+ $("recentList").innerHTML=allReports.slice(0,6).map(r=>`<div class="activity"><span class="activity-dot"></span><div><b>${esc(r.report_type)} · ${esc(r.location)}</b><small>${esc(r.reporter_name)} · ${fmtDate(r.created_at)}</small><p>${esc(r.description||"").slice(0,110)}</p></div></div>`).join("")||'<div class="empty">Belum ada laporan.</div>';
  $("lastUpdated").textContent="Diperbarui "+new Date().toLocaleTimeString("id-ID");
 }
 function latestActual(workId){const rows=progressRows.filter(p=>p.work_item_id===workId).sort((a,b)=>a.period.localeCompare(b.period)||a.created_at.localeCompare(b.created_at));return rows.length?Number(rows[rows.length-1].actual_percent):0;}
 function weightedActual(){return workItems.reduce((s,w)=>s+Number(w.weight_percent||0)*latestActual(w.id)/100,0);}
-function planValue(){return baselineRows.length?Number(baselineRows[baselineRows.length-1].planned_cumulative):workItems.reduce((s,w)=>s+Number(w.weight_percent||0)*Number(w.planned_percent||0)/100,0);}
+const schedule33=[0.20,2.96,7.14,10.37,12.68,16.14,18.37,20.0,22.0,24.01,27.0,31.72,35.81,39.3,44.7,50.4,55.83,62.3,72.05,74.75,79.11,82.4,86.1,89.8,93.2,96.5,98.1,99.0,99.4,99.7,99.85,99.95,100];
+const baselinePeriod33=i=>"2026-CW"+String(i+1).padStart(2,"0");
+const activeBaseline=()=>baselineRows.length?baselineRows:schedule33.map((v,i)=>({period:baselinePeriod33(i),planned_cumulative:v}));
+function planValue(){const rows=activeBaseline();return Number(rows[rows.length-1]?.planned_cumulative||0);}
 function updateStats(){
  const wt=workItems.reduce((s,w)=>s+Number(w.weight_percent||0),0);
  const a=weightedActual(),p=planValue();
@@ -148,7 +152,7 @@ function drawOne(canvasId){
  const pad={l:44,r:18,t:18,b:38},cw=width-pad.l-pad.r,ch=height-pad.t-pad.b;
  ctx.font="11px DM Sans";ctx.strokeStyle="#e9e5dc";ctx.fillStyle="#777";
  for(let i=0;i<=5;i++){let y=pad.t+ch*i/5;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.stroke();ctx.fillText(`${100-i*20}%`,4,y+4);}
- const periods=[...new Set([...baselineRows.map(x=>x.period),...progressRows.map(x=>x.period)])].sort();
+ const periods=[...new Set([...activeBaseline().map(x=>x.period),...progressRows.map(x=>x.period)])].sort();
  if(!periods.length){
   const demo=[0,1,3,6,10,16,23,32,42,52,63,73,81,88,93,97,100];
   ctx.font="bold 12px DM Sans";ctx.fillStyle="#8a5a00";ctx.textAlign="center";
@@ -159,7 +163,7 @@ function drawOne(canvasId){
   [0,4,8,12,16].forEach(i=>ctx.fillText("M"+i,pad.l+cw*i/16,height-9));
   ctx.textAlign="left";return;
  }
- const planMap=new Map(baselineRows.map(x=>[x.period,Number(x.planned_cumulative)]));
+ const planMap=new Map(activeBaseline().map(x=>[x.period,Number(x.planned_cumulative)]));
  const plan=periods.map(p=>planMap.has(p)?planMap.get(p):null);
  const actual=periods.map(p=>weightedActualAt(p));
  function line(vals,color){
@@ -316,11 +320,19 @@ function ppeCreateWorker(zone,slot){
  const id=ppeNextId++;
  return {id,zone,x:6+(slot%5)*18+ppeRandom()*5,depth:slot%2,dir:ppeRandom()<.5?-1:1,speed:.22+ppeRandom()*.9,phase:ppeRandom()*6.28,issue:ppeRandom()<.14?ppeIssues[ppeInt(0,3)]:null};
 }
+const virtualK3Reports=JSON.parse(sessionStorage.getItem("civilweek-k3-events")||"[]");
+function addVirtualK3Report(w){
+ const now=new Date(),row={id:"k3-"+now.getTime()+"-"+w.id,created_at:now.toISOString(),reporter_name:"Smart PPE (data virtual)",report_type:"Inspeksi K3",location:"Zona "+String.fromCharCode(65+w.zone),status:"Perlu pemeriksaan",description:"Pekerja "+ppeWorkerName(w)+": "+w.issue+" tidak terdeteksi. Temuan virtual, bukan insiden lapangan.",priority:"Tinggi"};
+ virtualK3Reports.unshift(row);if(virtualK3Reports.length>80)virtualK3Reports.length=80;
+ sessionStorage.setItem("civilweek-k3-events",JSON.stringify(virtualK3Reports));
+ renderReports();
+}
 function ppeRecord(w){
  const key=w.id,old=ppeLastIssues.get(key)||null;
  if(old===w.issue)return;
  ppeLastIssues.set(key,w.issue);
  if(!w.issue)return;
+ addVirtualK3Report(w);
  ppeEvents.unshift({time:ppeTime(),zone:w.zone,worker:ppeWorkerName(w),issue:w.issue,confidence:(89+w.id%10)+"%",status:"Perlu pemeriksaan"});
  if(ppeEvents.length>100)ppeEvents.length=100;
 }
