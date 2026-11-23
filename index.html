@@ -283,6 +283,21 @@ tr:hover td{background:#fffaf0}
       </section>
     </main>
   </div>
-  <script type="module" src="./app.js"></script>
+  <script>
+(function(){
+ const status=document.getElementById("connection");
+ window.__civilweekBooted=false;
+ window.addEventListener("error",function(e){
+  if(!window.__civilweekBooted&&status){status.textContent="Gagal memuat aplikasi — periksa JavaScript";status.className="pill warn";}
+ });
+ window.addEventListener("unhandledrejection",function(e){
+  if(status&&status.textContent.includes("koneksi")){status.textContent="Koneksi gagal — "+String(e.reason?.message||"permintaan tidak berhasil").slice(0,90);status.className="pill warn";}
+ });
+ setTimeout(function(){
+  if(!window.__civilweekBooted&&status){status.textContent="Aplikasi belum berjalan — modul JavaScript gagal dimuat";status.className="pill warn";}
+ },9000);
+})();
+</script>
+  <script type="module" src="./app.js?v=20261123-fix3"></script>
 </body>
 </html>
