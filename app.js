@@ -97,7 +97,7 @@ async function loadMembers(){
 }
 async function loadWork(){
  const {data,error}=await db.from("work_items").select("*").order("sort_order");
- if(error) console.warn(error); workItems=data||[]; renderWorkOptions(); renderWorkTable();
+ if(error){ console.error("Gagal memuat pekerjaan",error); workItems=[]; renderWorkOptions(); renderWorkTable(); const note=$("workLoadStatus"); if(note) note.textContent="Gagal mengambil pekerjaan: "+error.message+" (kode "+(error.code||"-")+")"; return; } workItems=data||[]; renderWorkOptions(); renderWorkTable(); const note=$("workLoadStatus"); if(note) note.textContent=`${workItems.length} pekerjaan berhasil dimuat dari Supabase.`;
 }
 async function loadReports(){
  const {data,error}=await db.from("progress_reports").select("id,created_at,reporter_name,report_type,location,status,description,priority").order("created_at",{ascending:false}).limit(100);
