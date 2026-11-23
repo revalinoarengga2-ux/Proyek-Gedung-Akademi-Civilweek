@@ -115,6 +115,52 @@ async function loadWeeklyProgress(){
  if(error){console.warn("Gagal memuat realisasi mingguan",error);return;}
  weeklyProgress=data||[];updateStats();drawCurves();renderWeeklyCurveTable();
 }
+const checklistKey="civilweek-checklist-v2";
+const checklistIds=["mag","form","excavate","pour","cctv"];
+let checklistState={};
+try{const saved=JSON.parse(localStorage.getItem(checklistKey)||"{}");if(saved&&typeof saved==="object")checklistState=saved;}catch(e){console.warn("Checklist storage:",e);}
+function persistChecklists(){try{localStorage.setItem(checklistKey,JSON.stringify(checklistState));return true;}catch(e){return false;}}
+function checklistEntries(){
+ return checklistIds.flatMap(id=>(checklistState[id]?.history||[]).map((r,i)=>({
+  id:"check-"+id+"-"+i,created_at:r.created_at,reporter_name:r.actor||"Pengguna Civilweek",
+  report_type:"Checklist "+({mag:"MAG-CAGE",form:"Rapid-Cycle Formwork",excavate:"Safe-Excavate",pour:"Smart Pour Scheduling",cctv:"Smart PPE"}[id]),
+  location:"Monitoring inovasi",status:r.complete?"Checklist lengkap":"Checklist "+r.done+"/4",
+  priority:"Normal",description:(r.action==="reset"?"Reset tahapan · ":"Pemeriksaan tahapan · ")+r.done+"/4 selesai"+(r.note?" · "+r.note:"")+". Catatan checklist, bukan persetujuan teknis."
+ })));
+}
+function renderChecklist(id){
+ const root=document.querySelector('[data-checklist="'+id+'"]');if(!root)return;
+ const saved=checklistState[id]||{},flags=Array.isArray(saved.flags)?saved.flags:[];
+ root.querySelectorAll('input[type="checkbox"]').forEach((input,i)=>{input.checked=!!flags[i];input.disabled=isGuest;});
+ const done=flags.filter(Boolean).length;
+ $("check-progress-"+id).textContent=done+" / 4 tahap · "+Math.round(done/4*100)+"%";
+ $("check-fill-"+id).style.width=done/4*100+"%";
+ $("check-note-"+id).value=saved.note||"";$("check-note-"+id).disabled=isGuest;
+ document.querySelectorAll('[data-check-save="'+id+'"],[data-check-reset="'+id+'"]').forEach(b=>b.disabled=isGuest);
+ $("check-log-"+id).innerHTML=(saved.history||[]).slice(-4).reverse().map(r=>'<div>'+esc(new Date(r.created_at).toLocaleString("id-ID"))+' · '+esc(r.action==="reset"?"Reset":"Disimpan")+' · '+r.done+'/4 tahap · '+esc(r.note||"Tanpa catatan")+'</div>').join("")||'<div>Belum ada riwayat pemeriksaan.</div>';
+}
+function saveChecklist(id,reset=false){
+ if(isGuest)return;
+ const root=document.querySelector('[data-checklist="'+id+'"]');if(!root)return;
+ const flags=reset?[false,false,false,false]:Array.from(root.querySelectorAll('input')).map(el=>el.checked);
+ const note=reset?"":$("check-note-"+id).value.trim(),done=flags.filter(Boolean).length;
+ const previous=checklistState[id]||{};
+ const history=[...(previous.history||[]),{created_at:new Date().toISOString(),actor:profile?.full_name||currentUser?.email||"Pengguna",done,complete:done===4,note,action:reset?"reset":"save"}].slice(-40);
+ checklistState[id]={flags,note,history};
+ const persisted=persistChecklists();renderChecklist(id);
+ $("check-message-"+id).textContent=(persisted?"Tersimpan di browser ini. ":"Tersimpan sementara di sesi ini. ")+done+"/4 tahap selesai; bukan persetujuan teknis.";
+ renderReports();
+}
+checklistIds.forEach(id=>{
+ document.querySelector('[data-check-save="'+id+'"]')?.addEventListener("click",()=>saveChecklist(id));
+ document.querySelector('[data-check-reset="'+id+'"]')?.addEventListener("click",()=>{if(confirm("Reset semua tahapan checklist ini?"))saveChecklist(id,true);});
+ document.querySelector('[data-checklist="'+id+'"]')?.addEventListener("change",()=>{
+  const done=Array.from(document.querySelectorAll('[data-checklist="'+id+'"] input:checked')).length;
+  $("check-progress-"+id).textContent=done+" / 4 tahap · "+done*25+"% (belum disimpan)";
+  $("check-fill-"+id).style.width=done*25+"%";
+ });
+ renderChecklist(id);
+});
 function innovationReports(){
  const entries=[];
  for(const [kind,label] of [["form","Rapid-Cycle Formwork"],["pour","Smart Pour Scheduling"]]){
@@ -130,7 +176,7 @@ function innovationReports(){
  return entries;
 }
 function allVisibleReports(){
- return [...virtualK3Reports,...innovationReports(),...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ return [...virtualK3Reports,...innovationReports(),...checklistEntries(),...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
 }
 function renderReports(){
  if(isGuest)return;const allReports=allVisibleReports();
@@ -203,7 +249,7 @@ async function uploadPhoto(file){
 }
 
 $("guestLoginBtn").addEventListener("click",()=>{
- isGuest=true;currentUser=null;profile=null;members=[];reports=[];weeklyProgress=[];progressRows=[];
+ isGuest=true;currentUser=null;profile=null;checklistIds.forEach(renderChecklist);members=[];reports=[];weeklyProgress=[];progressRows=[];
  workItems=defaultWork.map(([name,category,weight_percent],i)=>({id:"demo-"+i,name,category,weight_percent}));
  $("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
  $("guestBanner").classList.remove("hidden");$("formManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("pourManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("userName").textContent="Guest";$("userRole").textContent="Viewer · Demo";$("userInitial").textContent="G";
@@ -221,7 +267,7 @@ $("loginForm").addEventListener("submit",async e=>{
  if(error){msg("loginMessage",error.message);return;} await enterApp(data.user);
 });
 async function enterApp(user){
- isGuest=false;currentUser=user;
+ isGuest=false;currentUser=user;checklistIds.forEach(renderChecklist);
  const {data,error}=await db.from("profiles").select("*").eq("id",user.id).single();
  if(error){msg("loginMessage","Akun belum memiliki profil personel. Minta administrator melengkapi tabel profiles.");await db.auth.signOut();return;}
  profile=data;$("guestBanner").classList.add("hidden");$("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
