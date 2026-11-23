@@ -4,7 +4,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 window.__civilweekBooted=true;
 const $ = (id) => document.getElementById(id);
 const configured = !SUPABASE_URL.includes("YOUR-PROJECT") && !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
-let db = null, currentUser = null, profile = null, members = [], workItems = [], reports = [], progressRows = [], baselineRows = [];
+let db = null, currentUser = null, profile = null, members = [], workItems = [], reports = [], progressRows = [], baselineRows = [], weeklyProgress = [];
 if (configured) db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const org = [
@@ -109,6 +109,11 @@ async function loadProgress(){
  if(error){console.warn(error);return;} progressRows=data||[]; renderWorkTable(); drawCurves(); updateStats();
 }
 async function loadBaseline(){drawCurves();}
+async function loadWeeklyProgress(){
+ const {data,error}=await db.from("project_weekly_progress").select("period,actual_cumulative,updated_at").order("period");
+ if(error){console.warn("Gagal memuat realisasi mingguan",error);return;}
+ weeklyProgress=data||[];updateStats();drawCurves();
+}
 function renderReports(){
  const allReports=[...virtualK3Reports,...reports].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
  $("statReports").textContent=allReports.length;
@@ -125,7 +130,7 @@ const activeBaseline=()=>schedule33.map((v,i)=>({period:baselinePeriod33(i),plan
 function planValue(){const rows=activeBaseline();return Number(rows[rows.length-1]?.planned_cumulative||0);}
 function updateStats(){
  const wt=workItems.reduce((s,w)=>s+Number(w.weight_percent||0),0);
- const a=weightedActual(),p=planValue();
+ const a=weeklyProgress.length?Number(weeklyProgress[weeklyProgress.length-1].actual_cumulative):0,p=planValue();
  $("statPlan").textContent=fmtPct(p);$("statActual").textContent=fmtPct(a);
  $("curvePlan").textContent=fmtPct(p);$("curveActual").textContent=fmtPct(a);$("curveDeviation").textContent=(a-p>=0?"+":"")+fmtPct(a-p);
 }
@@ -147,7 +152,7 @@ function drawOne(canvasId){
  const pad={l:44,r:18,t:18,b:38},cw=width-pad.l-pad.r,ch=height-pad.t-pad.b;
  ctx.font="11px DM Sans";ctx.strokeStyle="#e9e5dc";ctx.fillStyle="#777";
  for(let i=0;i<=5;i++){let y=pad.t+ch*i/5;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.stroke();ctx.fillText(`${100-i*20}%`,4,y+4);}
- const periods=[...new Set([...activeBaseline().map(x=>x.period),...progressRows.map(x=>x.period)])].sort();
+ const periods=activeBaseline().map(x=>x.period);
  if(!periods.length){
   const demo=[0,1,3,6,10,16,23,32,42,52,63,73,81,88,93,97,100];
   ctx.font="bold 12px DM Sans";ctx.fillStyle="#8a5a00";ctx.textAlign="center";
@@ -160,7 +165,8 @@ function drawOne(canvasId){
  }
  const planMap=new Map(activeBaseline().map(x=>[x.period,Number(x.planned_cumulative)]));
  const plan=periods.map(p=>planMap.has(p)?planMap.get(p):null);
- const actual=periods.map(p=>weightedActualAt(p));
+ const actualMap=new Map(weeklyProgress.map(r=>[r.period,Number(r.actual_cumulative)]));
+ const actual=periods.map(p=>actualMap.has(p)?actualMap.get(p):null);
  function line(vals,color){
   ctx.beginPath();let started=false;
   vals.forEach((v,i)=>{if(v===null||v===undefined){started=false;return;}let x=pad.l+(periods.length===1?cw/2:cw*i/(periods.length-1)),y=pad.t+ch*(1-v/100);if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y);});
@@ -172,7 +178,7 @@ function drawOne(canvasId){
  periods.forEach((t,i)=>{if(i%step===0||i===periods.length-1){let x=pad.l+(periods.length===1?cw/2:cw*i/(periods.length-1));ctx.save();ctx.translate(x,height-8);ctx.rotate(-.25);ctx.fillStyle="#777";ctx.fillText(t,-12,0);ctx.restore();}});
 }
 function drawCurves(){drawOne("miniCurve");drawOne("mainCurve");}
-async function refreshAll(){await Promise.all([loadMembers(),loadWork(),loadReports(),loadProgress(),loadBaseline()]);updateStats();drawCurves();}
+async function refreshAll(){await Promise.all([loadMembers(),loadWork(),loadReports(),loadProgress(),loadBaseline(),loadWeeklyProgress()]);updateStats();drawCurves();}
 async function uploadPhoto(file){
  if(!file)return null;
  const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,"_"),path=`${currentUser.id}/${Date.now()}-${safe}`;
@@ -209,11 +215,17 @@ $("reportForm").addEventListener("submit",async e=>{
  }catch(err){msg("reportMessage",err.message||"Gagal mengirim laporan.");}
 });
 $("progressForm").addEventListener("submit",async e=>{
- e.preventDefault();try{
-  const row={work_item_id:$("progressWork").value,period:$("progressPeriod").value,actual_percent:Number($("progressPercent").value),note:$("progressNote").value,entered_by:currentUser.id};
-  const {error}=await db.from("work_progress").insert(row);if(error)throw error;
-  msg("progressMessage","Realisasi berhasil disimpan.",true);$("progressForm").reset();await loadProgress();
- }catch(err){msg("progressMessage",err.message);}
+ e.preventDefault();
+ try{
+  const period=$("progressPeriod").value,actual=Number($("progressPercent").value);
+  if(!/^2026-CW(0[1-9]|[12][0-9]|3[0-3])$/.test(period)||!Number.isFinite(actual)||actual<0||actual>100)throw Error("Pilih minggu 1–33 dan nilai 0–100%.");
+  const existing=weeklyProgress.find(r=>r.period===period);
+  const row={period,actual_cumulative:actual,note:$("progressNote").value,entered_by:currentUser.id,updated_at:new Date().toISOString()};
+  const result=existing?await db.from("project_weekly_progress").update(row).eq("period",period):await db.from("project_weekly_progress").insert(row);
+  if(result.error)throw result.error;
+  msg("progressMessage","Realisasi kumulatif berhasil disimpan.",true);
+  $("progressForm").reset();await loadWeeklyProgress();
+ }catch(err){msg("progressMessage",err.message||"Gagal menyimpan realisasi.");}
 });
 $("addWorkBtn").addEventListener("click",async()=>{
  const name=prompt("Nama pekerjaan baru:");if(!name)return;
