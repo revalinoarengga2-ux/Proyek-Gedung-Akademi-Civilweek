@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
+window.__civilweekBooted=true;
 const $ = (id) => document.getElementById(id);
 const configured = !SUPABASE_URL.includes("YOUR-PROJECT") && !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
 let db = null, currentUser = null, profile = null, members = [], workItems = [], reports = [], progressRows = [], baselineRows = [];
@@ -238,7 +239,7 @@ renderOrg();
 if(!configured){setConnected(false,"Belum dikonfigurasi");$("loginMessage").textContent="Hubungkan Supabase terlebih dahulu (lihat README.md).";$("loginMessage").className="form-message error";}
 else{
  setConnected(false,"Menghubungkan…");
- db.auth.getSession().then(async({data})=>{if(data.session)await enterApp(data.session.user);else setConnected(true,"Siap masuk");});
+ db.auth.getSession().then(async({data,error})=>{if(error)throw error;if(data.session)await enterApp(data.session.user);else setConnected(true,"Siap masuk");}).catch(err=>{console.error("Supabase session:",err);setConnected(false,"Koneksi gagal: "+(err.message||"periksa jaringan"));});
  db.auth.onAuthStateChange((_event,session)=>{if(!session){$("appView").classList.add("hidden");$("loginView").classList.remove("hidden");$("logoutBtn").classList.add("hidden");}});
 }
 window.addEventListener("resize",()=>{if(!$("page-curve").classList.contains("hidden"))drawCurves();if(!$("page-dashboard").classList.contains("hidden"))drawOne("miniCurve");});
