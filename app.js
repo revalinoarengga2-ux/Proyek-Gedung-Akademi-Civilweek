@@ -386,17 +386,17 @@ async function uploadPhoto(file){
  if(error)throw error;return path;
 }
 
-$("guestLoginBtn").addEventListener("click",()=>{
+$("guestLoginBtn").addEventListener("click",async()=>{
  isGuest=true;currentUser=null;profile=null;checklistIds.forEach(renderChecklist);renderLps();members=[];reports=[];weeklyProgress=[];progressRows=[];
  workItems=defaultWork.map(([name,category,weight_percent],i)=>({id:"demo-"+i,name,category,weight_percent}));
  $("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
- $("guestBanner").classList.remove("hidden");$("formManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("pourManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("userName").textContent="Guest";$("userRole").textContent="Viewer · Demo";$("userInitial").textContent="G";
+ $("guestBanner").classList.remove("hidden");$("formManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("pourManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("userName").textContent="Guest";$("userRole").textContent="Viewer · Read Only";$("userInitial").textContent="G";
  document.querySelector('[data-page="reports"]').classList.add("hidden");
  $("addWorkBtn").classList.add("hidden");$("progressForm").closest("article").classList.add("hidden");
  $("refreshBtn").textContent="↻ Perbarui Tampilan";
  renderWorkTable();renderWeeklyCurveTable();updateStats();drawCurves();renderOrg();
  $("statReports").textContent="—";$("statOpen").textContent="—";$("recentList").innerHTML='<div class="empty">Laporan internal hanya tersedia bagi akun proyek.</div>';
- $("lastUpdated").textContent="Data demo";setConnected(true,"Guest · Viewer");showPage("dashboard");
+ $("lastUpdated").textContent="Memuat data proyek";showPage("dashboard");await refreshGuestCurve();
 });
 $("loginForm").addEventListener("submit",async e=>{
  e.preventDefault();
@@ -414,7 +414,7 @@ async function enterApp(user){
  await refreshAll();setConnected(true,"Database online");
 }
 $("logoutBtn").addEventListener("click",async()=>{if(!isGuest&&db)await db.auth.signOut();location.reload();});
-$("refreshBtn").addEventListener("click",()=>{if(isGuest){drawOne("miniCurve");return;}refreshAll();});
+$("refreshBtn").addEventListener("click",()=>{if(isGuest){refreshGuestCurve();return;}refreshAll();});
 
 $("reportForm").addEventListener("submit",async e=>{
  e.preventDefault();if(!db)return;
@@ -698,3 +698,6 @@ $("pourManualInput")?.addEventListener("submit",e=>{
 document.querySelectorAll("[data-open-innovation]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.openInnovation)));
 defaultManualDateTimes();renderFormManual();renderPourManual();innovationReportsReady=true;renderReports();
 setInnovationOverview("cctv","Deteksi APD virtual");
+
+async function refreshGuestCurve(){if(!isGuest||!db)return;try{const {data,error}=await db.from("project_weekly_progress").select("period,actual_cumulative,updated_at").order("period");if(error)throw error;if(!isGuest)return;weeklyProgress=data||[];updateStats();renderWeeklyCurveTable();drawCurves();$("lastUpdated").textContent="Diperbarui "+new Date().toLocaleTimeString("id-ID");setConnected(true,"Guest · Read Only");}catch(e){setConnected(false,"Guest · Gagal memuat progres");console.error(e);}}
+setInterval(()=>{if(isGuest)refreshGuestCurve();},15000);
