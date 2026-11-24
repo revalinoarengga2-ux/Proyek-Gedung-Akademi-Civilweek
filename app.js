@@ -231,7 +231,7 @@ function innovationReports(){
   });
  }
  for(const config of monitorConfigs){
-  (monitorSamples[config.id]||[]).filter(r=>r.value>config.limit).slice(-12).forEach((r,i)=>entries.push({id:"virtual-"+config.id+"-"+i,created_at:r.time.toISOString(),reporter_name:config.id==="mag"?"Sensor virtual MAG-CAGE":"Sensor virtual Safe-Excavate",report_type:config.id==="mag"?"Peringatan MAG-CAGE":"Peringatan Safe-Excavate",location:"Monitoring inovasi",status:"Virtual · Waspada",priority:"Menengah",description:config.metric+" "+r.value+" "+config.unit+" melampaui ambang demo "+config.limit+" "+config.unit+". Bukan hasil sensor lapangan."}));
+  (monitorSamples[config.id]||[]).filter(r=>r.value>config.limit).slice(-12).forEach((r,i)=>entries.push({id:"virtual-"+config.id+"-"+i,created_at:r.time.toISOString(),reporter_name:config.id==="mag"?"Sensor virtual MAG-CAGE":"Sensor virtual Safe-Excavate",report_type:config.id==="mag"?"Peringatan MAG-CAGE":"Peringatan Safe-Excavate",location:"Monitoring inovasi",status:"Virtual · Waspada",priority:"Menengah",description:config.metric+" "+r.value+" "+config.unit+" melampaui ambang virtual "+config.limit+" "+config.unit+". Bukan hasil sensor lapangan."}));
  }
  return entries;
 }
@@ -354,10 +354,10 @@ function drawOne(canvasId){
  for(let i=0;i<=5;i++){let y=pad.t+ch*i/5;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.stroke();ctx.fillText(`${100-i*20}%`,4,y+4);}
  const periods=activeBaseline().map(x=>x.period);
  if(!periods.length){
-  const demo=[0,1,3,6,10,16,23,32,42,52,63,73,81,88,93,97,100];
+  const indicative=[0,1,3,6,10,16,23,32,42,52,63,73,81,88,93,97,100];
   ctx.font="bold 12px DM Sans";ctx.fillStyle="#8a5a00";ctx.textAlign="center";
   ctx.fillText("RENCANA INDIKATIF • BUKAN BASELINE RESMI",width/2,12);
-  ctx.beginPath();demo.forEach((v,i)=>{const x=pad.l+cw*i/(demo.length-1),y=pad.t+ch*(1-v/100);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.beginPath();indicative.forEach((v,i)=>{const x=pad.l+cw*i/(indicative.length-1),y=pad.t+ch*(1-v/100);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
   ctx.strokeStyle="#d99400";ctx.lineWidth=3;ctx.stroke();
   ctx.font="11px DM Sans";ctx.fillStyle="#777";
   [0,4,8,12,16].forEach(i=>ctx.fillText("M"+i,pad.l+cw*i/16,height-9));
@@ -388,7 +388,7 @@ async function uploadPhoto(file){
 
 $("guestLoginBtn").addEventListener("click",async()=>{
  isGuest=true;currentUser=null;profile=null;checklistIds.forEach(renderChecklist);renderLps();members=[];reports=[];weeklyProgress=[];progressRows=[];
- workItems=defaultWork.map(([name,category,weight_percent],i)=>({id:"demo-"+i,name,category,weight_percent}));
+ workItems=defaultWork.map(([name,category,weight_percent],i)=>({id:"indicative-"+i,name,category,weight_percent}));
  $("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
  $("guestBanner").classList.remove("hidden");$("formManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("pourManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("userName").textContent="Guest";$("userRole").textContent="Viewer · Read Only";$("userInitial").textContent="G";
  document.querySelector('[data-page="reports"]').classList.add("hidden");
@@ -483,24 +483,24 @@ else{
 window.addEventListener("resize",()=>{if(!$("page-curve").classList.contains("hidden"))drawCurves();if(!$("page-dashboard").classList.contains("hidden"))drawOne("miniCurve");});
 
 
-const innovationDemoSteps={
+const innovationConceptSteps={
 mag:["Pasang jig magnetik","Atur posisi sengkang","Periksa jarak dan selimut","Lepas jig sebelum pengecoran"],
 form:["Siapkan Zona 1","Pindahkan regu ke Zona 2","Gunakan modul Zona 3","Periksa syarat bongkar dan reuse"],
 excavate:["Galian tahap 1 dan penahan","Galian tahap 2 dan instrumentasi","Galian tahap 3 dan pengendalian air","Evaluasi batas geoteknik"],
 pour:["Hitung kapasitas pompa dan truk","Atur slot kedatangan T1","Atur slot kedatangan T2","Evaluasi suplai dan potensi antrean"]
 };
-function updateInnovationDemo(id,value){
- const index=Math.max(0,Math.min(3,Number(value)||0)),steps=innovationDemoSteps[id];if(!steps)return;
+function updateInnovationConcept(id,value){
+ const index=Math.max(0,Math.min(3,Number(value)||0)),steps=innovationConceptSteps[id];if(!steps)return;
  const slider=$("slider-"+id);if(slider)slider.value=index;
  $("metric-"+id).textContent="Tahap "+(index+1)+" / 4";
  $("step-"+id).textContent=steps[index];
  for(let i=0;i<3;i++){const check=$("check-"+id+"-"+i);check.textContent=i<index?"✓":"○";check.classList.toggle("done",i<index);}
  const scene=document.querySelector('[data-innovation="'+id+'"] .scene-object');if(scene)scene.style.transform="translateX("+(index*3)+"%)";
 }
-Object.keys(innovationDemoSteps).forEach(id=>{
- $("slider-"+id)?.addEventListener("input",e=>updateInnovationDemo(id,e.target.value));
- document.querySelector('[data-demo-next="'+id+'"]')?.addEventListener("click",()=>updateInnovationDemo(id,(Number($("slider-"+id).value)+1)%4));
- document.querySelector('[data-demo-reset="'+id+'"]')?.addEventListener("click",()=>updateInnovationDemo(id,0));
+Object.keys(innovationConceptSteps).forEach(id=>{
+ $("slider-"+id)?.addEventListener("input",e=>updateInnovationConcept(id,e.target.value));
+ document.querySelector('[data-indicative-next="'+id+'"]')?.addEventListener("click",()=>updateInnovationConcept(id,(Number($("slider-"+id).value)+1)%4));
+ document.querySelector('[data-indicative-reset="'+id+'"]')?.addEventListener("click",()=>updateInnovationConcept(id,0));
 });
 
 
@@ -554,7 +554,7 @@ setInterval(()=>{if(document.hidden)return;monitorConfigs.forEach(config=>addMon
 
 
 
-/* Digital twin K3 — synthetic demo, never physical CCTV or real AI inference. */
+/* Digital twin K3 — synthetic indicative, never physical CCTV or real AI inference. */
 const ppeZones=Array.from({length:12},(_,i)=>"Zona "+String.fromCharCode(65+i));
 const ppeIssues=["Helm","Rompi","Sepatu safety","Sarung tangan"];
 const ppeGrid=document.getElementById("ppeCameraGrid"),ppeFilter=document.getElementById("ppeZoneFilter");
