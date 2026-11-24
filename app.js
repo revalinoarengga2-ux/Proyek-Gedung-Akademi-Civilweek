@@ -231,7 +231,7 @@ function innovationReports(){
   });
  }
  for(const config of monitorConfigs){
-  (monitorSamples[config.id]||[]).filter(r=>r.value>config.limit).slice(-12).forEach((r,i)=>entries.push({id:"virtual-"+config.id+"-"+i,created_at:r.time.toISOString(),reporter_name:config.id==="mag"?"Sensor virtual MAG-CAGE":"Sensor virtual Safe-Excavate",report_type:config.id==="mag"?"Peringatan MAG-CAGE":"Peringatan Safe-Excavate",location:"Monitoring inovasi",status:"Simulasi · Waspada",priority:"Menengah",description:config.metric+" "+r.value+" "+config.unit+" melampaui ambang demo "+config.limit+" "+config.unit+". Bukan hasil sensor lapangan."}));
+  (monitorSamples[config.id]||[]).filter(r=>r.value>config.limit).slice(-12).forEach((r,i)=>entries.push({id:"virtual-"+config.id+"-"+i,created_at:r.time.toISOString(),reporter_name:config.id==="mag"?"Sensor virtual MAG-CAGE":"Sensor virtual Safe-Excavate",report_type:config.id==="mag"?"Peringatan MAG-CAGE":"Peringatan Safe-Excavate",location:"Monitoring inovasi",status:"Virtual · Waspada",priority:"Menengah",description:config.metric+" "+r.value+" "+config.unit+" melampaui ambang demo "+config.limit+" "+config.unit+". Bukan hasil sensor lapangan."}));
  }
  return entries;
 }
@@ -271,7 +271,7 @@ function allVisibleReports(){
 function renderReports(){
  if(isGuest)return;const allReports=allVisibleReports();
  $("statReports").textContent=allReports.length;
- $("statOpen").textContent=allReports.filter(r=>!["Selesai","Ditutup","Catatan operasional"].includes(r.status)&&!String(r.status||"").startsWith("Simulasi")).length;
+ $("statOpen").textContent=allReports.filter(r=>!["Selesai","Ditutup","Catatan operasional"].includes(r.status)&&!String(r.status||"").startsWith("Virtual")).length;
  $("reportsTable").innerHTML=allReports.length?allReports.map(r=>`<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.reporter_name)}</td><td>${esc(r.report_type)}</td><td>${esc(r.location)}</td><td><span class="pill ${r.status==="Selesai"?"success":"warn"}">${esc(r.status||"Baru")}</span></td></tr>`).join(""):`<tr><td colspan="5" class="empty">Belum ada laporan.</td></tr>`;
  $("recentList").innerHTML=allReports.slice(0,6).map(r=>`<div class="activity"><span class="activity-dot"></span><div><b>${esc(r.report_type)} · ${esc(r.location)}</b><small>${esc(r.reporter_name)} · ${fmtDate(r.created_at)}</small><p>${esc(r.description||"").slice(0,110)}</p></div></div>`).join("")||'<div class="empty">Belum ada laporan.</div>';
  $("lastUpdated").textContent="Diperbarui "+new Date().toLocaleTimeString("id-ID");renderOwnerOverview();
@@ -356,7 +356,7 @@ function drawOne(canvasId){
  if(!periods.length){
   const demo=[0,1,3,6,10,16,23,32,42,52,63,73,81,88,93,97,100];
   ctx.font="bold 12px DM Sans";ctx.fillStyle="#8a5a00";ctx.textAlign="center";
-  ctx.fillText("SIMULASI RENCANA • BUKAN BASELINE RESMI",width/2,12);
+  ctx.fillText("RENCANA INDIKATIF • BUKAN BASELINE RESMI",width/2,12);
   ctx.beginPath();demo.forEach((v,i)=>{const x=pad.l+cw*i/(demo.length-1),y=pad.t+ch*(1-v/100);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
   ctx.strokeStyle="#d99400";ctx.lineWidth=3;ctx.stroke();
   ctx.font="11px DM Sans";ctx.fillStyle="#777";
@@ -543,7 +543,7 @@ function renderMonitor(config){
  ctx.strokeStyle="#c65c20";ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(p.l,yy(config.limit));ctx.lineTo(w-p.r,yy(config.limit));ctx.stroke();ctx.setLineDash([]);
  ctx.strokeStyle="#eda900";ctx.lineWidth=3;ctx.beginPath();rows.forEach((r,i)=>i?ctx.lineTo(xx(i),yy(r.value)):ctx.moveTo(xx(i),yy(r.value)));ctx.stroke();
  rows.forEach((r,i)=>{ctx.fillStyle=r.value>config.limit?"#c65c20":"#e9a500";ctx.beginPath();ctx.arc(xx(i),yy(r.value),3,0,Math.PI*2);ctx.fill();});
- ctx.fillStyle="#777";ctx.fillText("Pembacaan simulasi →",w-170,h-9);
+ ctx.fillStyle="#777";ctx.fillText("Pembacaan virtual →",w-170,h-9);
 }
 monitorConfigs.forEach(config=>{
  monitorSamples[config.id]=[];
