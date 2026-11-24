@@ -237,23 +237,21 @@ function innovationReports(){
 }
 const activityResetKey="civilweek-activity-reset-cutoff-v1";
 let activityResetCutoff=localStorage.getItem(activityResetKey)||"";
-function resetLocalActivity(){
- if(isGuest)return;
- const approved=confirm("RESET SEMUA DATA LOKAL?\\n\\nIni menghapus catatan manual inovasi, LPS, constraint, keuangan, risiko, mutu, keputusan owner, checklist lama, dan riwayat K3 virtual pada browser ini. Data Supabase, akun, dan Kurva S resmi TIDAK dihapus. Simulasi virtual akan mulai lagi setelah halaman dimuat ulang.");
- if(!approved)return;
- const verify=prompt('Ketik RESET untuk mengonfirmasi penghapusan semua data lokal:');
- if(verify!=="RESET"){alert("Reset dibatalkan. Tidak ada data yang dihapus.");return;}
- const localKeys=["civilweek-manual-innovation-v1","civilweek-lps-weekly-v1","civilweek-constraints-v1","civilweek-checklist-v2","civilweek-activity-reset-cutoff-v1","civilweek-control-v1-finance","civilweek-control-v1-risk","civilweek-control-v1-quality","civilweek-control-v1-decision"];
- const sessionKeys=["civilweek-k3-events"];
+document.addEventListener("click",e=>{
+ const b=e.target.closest("[data-reset-module]");if(!b||isGuest)return;
+ const t=b.dataset.resetModule;if(!["mag","form","excavate","pour","cctv","lps","constraint","finance","risk","quality","decision"].includes(t))return;
+ if(!confirm("Hapus data lokal bagian "+b.textContent.replace("Reset ","")+" saja? Data Supabase dan modul lain tetap aman."))return;
  try{
-  localKeys.forEach(k=>localStorage.removeItem(k));
-  sessionKeys.forEach(k=>sessionStorage.removeItem(k));
- }catch(e){alert("Reset gagal: penyimpanan browser tidak dapat diakses. "+e.message);return;}
- alert("Data lokal berhasil direset. Halaman akan dimuat ulang. Data Supabase tetap aman.");
- window.location.reload();
-}
-$("resetRecentBtn").addEventListener("click",resetLocalActivity);
-$("resetReportsBtn").addEventListener("click",resetLocalActivity);
+ if(t==="form"||t==="pour"){const key="civilweek-manual-innovation-v1",saved=JSON.parse(localStorage.getItem(key)||"{}");saved[t]=[];localStorage.setItem(key,JSON.stringify(saved));manualRecords[t]=[];if(t==="form")renderFormManual();else renderPourManual();}
+ else if(t==="mag"||t==="excavate"){monitorSamples[t]=[];}
+ else if(t==="cctv"){virtualK3Reports.length=0;sessionStorage.removeItem("civilweek-k3-events");ppeEvents.length=0;ppeRenderEvents();}
+ else if(t==="lps"){localStorage.removeItem("civilweek-lps-weekly-v1");lpsRecords.length=0;renderLps();}
+ else if(t==="constraint"){localStorage.removeItem("civilweek-constraints-v1");constraintRecords.length=0;renderLps();}
+ else {localStorage.removeItem("civilweek-control-v1-"+t);window.dispatchEvent(new CustomEvent("civilweek-control-reset",{detail:t}));}
+ renderReports();
+ }catch(err){alert("Reset gagal: "+err.message);}
+});
+window.civilweekInnovationReport=()=>isGuest?[]:[...innovationReports(),...virtualK3Reports];
 function localAfterReset(rows){return activityResetCutoff?rows.filter(r=>String(r.created_at||"")>activityResetCutoff):rows;}
 function localDateTime(id){
  const value=$(id).value;
@@ -394,7 +392,7 @@ $("guestLoginBtn").addEventListener("click",()=>{
  $("loginView").classList.add("hidden");$("appView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
  $("guestBanner").classList.remove("hidden");$("formManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("pourManualInput").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);$("userName").textContent="Guest";$("userRole").textContent="Viewer · Demo";$("userInitial").textContent="G";
  document.querySelector('[data-page="reports"]').classList.add("hidden");
- $("addWorkBtn").classList.add("hidden");$("resetRecentBtn").disabled=true;$("resetReportsBtn").disabled=true;$("progressForm").closest("article").classList.add("hidden");
+ $("addWorkBtn").classList.add("hidden");$("progressForm").closest("article").classList.add("hidden");
  $("refreshBtn").textContent="↻ Perbarui Tampilan";
  renderWorkTable();renderWeeklyCurveTable();updateStats();drawCurves();renderOrg();
  $("statReports").textContent="—";$("statOpen").textContent="—";$("recentList").innerHTML='<div class="empty">Laporan internal hanya tersedia bagi akun proyek.</div>';
