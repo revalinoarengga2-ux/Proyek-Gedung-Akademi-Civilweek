@@ -78,7 +78,7 @@ function setConnected(ok, text){ $("connection").textContent=text; $("connection
 function fmtDate(v){ return v ? new Date(v).toLocaleString("id-ID",{dateStyle:"medium",timeStyle:"short"}) : "—"; }
 function fmtPct(v){ return `${Number(v||0).toFixed(2)}%`; }
 function esc(s=""){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function showPage(page){ if(isGuest&&page==="reports")return; document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden")); $("page-"+page).classList.remove("hidden"); document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.page===page)); if(page==="curve") drawCurves(); }
+function showPage(page){ if(isGuest&&page==="reports")return; document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden")); $("page-"+page).classList.remove("hidden"); document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.page===page)); if(page==="curve"||page==="dashboard") requestAnimationFrame(drawCurves); }
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
 
 function renderProjectResponsibles(){
@@ -347,7 +347,7 @@ function weightedActualAt(period){
  },0);
 }
 function drawOne(canvasId){
- const c=$(canvasId); if(!c)return; const dpr=window.devicePixelRatio||1, width=c.clientWidth||700, height=Number(c.getAttribute("height"))||260;
+ const c=$(canvasId); if(!c||!c.getClientRects().length)return; const width=Math.floor(c.getBoundingClientRect().width);if(width<80)return;const dpr=Math.min(window.devicePixelRatio||1,3),height=width<480?230:canvasId==="mainCurve"?320:260;c.style.height=height+"px";
  c.width=width*dpr;c.height=height*dpr;const ctx=c.getContext("2d");ctx.scale(dpr,dpr);ctx.clearRect(0,0,width,height);
  const pad={l:44,r:18,t:18,b:38},cw=width-pad.l-pad.r,ch=height-pad.t-pad.b;
  ctx.font="11px DM Sans";ctx.strokeStyle="#e9e5dc";ctx.fillStyle="#777";
@@ -374,8 +374,8 @@ function drawOne(canvasId){
   vals.forEach((v,i)=>{if(v===null||v===undefined)return;let x=pad.l+(periods.length===1?cw/2:cw*i/(periods.length-1)),y=pad.t+ch*(1-v/100);ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();});
  }
  line(plan,"#d99400");line(actual,"#263b59");
- const step=Math.max(1,Math.ceil(periods.length/6));
- periods.forEach((t,i)=>{if(i%step===0||i===periods.length-1){let x=pad.l+(periods.length===1?cw/2:cw*i/(periods.length-1));ctx.save();ctx.translate(x,height-8);ctx.rotate(-.25);ctx.fillStyle="#777";ctx.fillText(t,-12,0);ctx.restore();}});
+ const step=Math.max(1,Math.ceil((periods.length-1)/(width<480?4:6)));
+ periods.forEach((t,i)=>{if(i%step===0||i===periods.length-1){let x=pad.l+(periods.length===1?cw/2:cw*i/(periods.length-1));ctx.save();ctx.translate(x,height-12);ctx.fillStyle="#777";ctx.textAlign=i===0?"left":i===periods.length-1?"right":"center";ctx.fillText("M"+(i+1),0,0);ctx.restore();}});
 }
 function drawCurves(){drawOne("miniCurve");drawOne("mainCurve");}
 async function refreshAll(){await Promise.all([loadMembers(),loadWork(),loadReports(),loadProgress(),loadBaseline(),loadWeeklyProgress()]);updateStats();drawCurves();renderWeeklyCurveTable();}
@@ -701,3 +701,5 @@ setInnovationOverview("cctv","Deteksi APD virtual");
 
 async function refreshGuestCurve(){if(!isGuest||!db)return;try{const {data,error}=await db.from("project_weekly_progress").select("period,actual_cumulative,updated_at").order("period");if(error)throw error;if(!isGuest)return;weeklyProgress=data||[];updateStats();renderWeeklyCurveTable();drawCurves();$("lastUpdated").textContent="Diperbarui "+new Date().toLocaleTimeString("id-ID");setConnected(true,"Guest · Read Only");}catch(e){setConnected(false,"Guest · Gagal memuat progres");console.error(e);}}
 setInterval(()=>{if(isGuest)refreshGuestCurve();},15000);
+
+let curveResizeFrame=0;window.addEventListener("resize",()=>{cancelAnimationFrame(curveResizeFrame);curveResizeFrame=requestAnimationFrame(drawCurves);});
