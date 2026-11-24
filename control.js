@@ -2,7 +2,7 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),types=['finance','risk','quality','decision'],prefix='civilweek-control-v1-';
 const read=t=>{try{let a=JSON.parse(localStorage.getItem(prefix+t)||'[]');return Array.isArray(a)?a:[]}catch{return []}};
-let data=Object.fromEntries(types.map(t=>[t,read(t)]));
+let data=Object.fromEntries(types.map(t=>[t,read(t)]));window.addEventListener('civilweek-control-reset',e=>{if(types.includes(e.detail)){data[e.detail]=[];render();}});
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
 const guest=()=>$('guestBanner')&&!$('guestBanner').classList.contains('hidden');
@@ -50,7 +50,7 @@ for(const t of types){
  });
 }
 $('generateExecutivePdf')?.addEventListener('click',()=>{
- const week=$('execWeek').value,risks=data.risk.filter(r=>r.status!=='Ditutup'),quality=data.quality.filter(r=>r.result==='Tidak sesuai'&&r.status!=='Ditutup'),decisions=data.decision.filter(r=>!['Diputuskan','Ditutup'].includes(r.status));
+ const start=$('execStart').value,end=$('execEnd').value;if(!start||!end||start>end){alert('Isi rentang tanggal inovasi yang valid.');return;}const week=$('execWeek').value,risks=data.risk.filter(r=>r.status!=='Ditutup'),quality=data.quality.filter(r=>r.result==='Tidak sesuai'&&r.status!=='Ditutup'),decisions=data.decision.filter(r=>!['Diputuskan','Ditutup'].includes(r.status));
  const heading=(s)=>'<h2>'+safe(s)+'</h2>';
  const body='<h1>CIVILWEEK · LAPORAN EKSEKUTIF MINGGUAN</h1><p>Minggu '+safe(week)+' dari 33 · Dicetak '+safe(new Date().toLocaleString('id-ID'))+'</p><p class="warning">Laporan bersumber dari data lokal browser, belum termasuk data Supabase. Angka belum diverifikasi oleh tim proyek. Jangan gunakan sebagai dokumen pengesahan sebelum ditinjau.</p>'+
  heading('1. Keuangan')+'<p>Anggaran tercatat: <b>'+money(rabTotal)+'</b><br>Realisasi biaya tercatat: <b>'+(has('Realisasi biaya')?money(sum('Realisasi biaya')):'Belum tersedia')+'</b><br>Selisih: <b>'+(has('Realisasi biaya')?money(rabTotal-sum('Realisasi biaya')):'Belum tersedia')+'</b></p><p>Catatan: penjumlahan input manual, bukan nilai kontrak resmi.</p>'+
@@ -63,7 +63,11 @@ $('generateExecutivePdf')?.addEventListener('click',()=>{
  '<table><tr><th>Pekerjaan</th><th>PIC</th><th>Status</th><th>Kendala</th></tr>'+current.map(r=>'<tr><td>'+safe(r.task)+'</td><td>'+safe(r.owner)+'</td><td>'+safe(r.status)+'</td><td>'+safe(r.constraint||'—')+'</td></tr>').join('')+'</table>'+
  '<h3>Hambatan Look Ahead (hingga 6 minggu ke depan)</h3><table><tr><th>Minggu</th><th>Hambatan</th><th>PIC</th><th>Target</th></tr>'+lookahead.map(r=>'<tr><td>'+safe(r.week)+'</td><td>'+safe(r.description||r.task||'—')+'</td><td>'+safe(r.owner)+'</td><td>'+safe(r.deadline||'—')+'</td></tr>').join('')+'</table>';
 })()+heading('4. Keputusan yang Dibutuhkan Owner')+'<p>Keputusan tertunda: '+decisions.length+'</p><table><tr><th>Topik</th><th>Permintaan</th><th>PIC</th><th>Tenggat</th></tr>'+decisions.map(r=>'<tr><td>'+safe(r.subject)+'</td><td>'+safe(r.request)+'</td><td>'+safe(r.owner)+'</td><td>'+safe(r.due)+'</td></tr>').join('')+'</table>'+
- heading('5. Kesimpulan Manajer Proyek')+'<p>'+safe($('execSummary').value.trim()||'Belum diisi.')+'</p>'+heading('6. Tindak Lanjut')+'<p>'+safe($('execActions').value.trim()||'Belum diisi.')+'</p><small>Perlu verifikasi dan persetujuan pejabat proyek sebelum didistribusikan.</small>';
+ heading('5. Laporan Inovasi Konstruksi')+(()=>{
+ const rows=(window.civilweekInnovationReport?.()||[]).filter(r=>{const d=new Date(r.created_at);if(!Number.isFinite(d.getTime()))return false;const local=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);return local>=start&&local<=end;});
+ const groups=[['MAG-CAGE','Peringatan MAG-CAGE'],['Rapid-Cycle Formwork','Rapid-Cycle Formwork'],['Safe-Excavate','Peringatan Safe-Excavate'],['Smart Pour Scheduling','Smart Pour Scheduling'],['Smart PPE','Inspeksi K3']];
+ return '<p>Periode '+safe(start)+' sampai '+safe(end)+'. MAG-CAGE, Safe-Excavate dan Smart PPE: riwayat simulasi yang masih tersedia pada sesi ini, bukan bukti lapangan. Sensor hanya mencatat peringatan pada rekap ini.</p>'+groups.map(([name,type])=>{const items=rows.filter(r=>r.report_type===type);return '<h3>'+safe(name)+'</h3><p>'+items.length+' catatan tersedia.</p>'+(items.length?'<table><tr><th>Waktu</th><th>Lokasi</th><th>Catatan</th></tr>'+items.map(r=>'<tr><td>'+safe(new Date(r.created_at).toLocaleString('id-ID'))+'</td><td>'+safe(r.location)+'</td><td>'+safe(r.description)+'</td></tr>').join('')+'</table>':'<p>Belum ada catatan pada periode ini.</p>');}).join('');
+})()+heading('6. Kesimpulan Manajer Proyek')+'<p>'+safe($('execSummary').value.trim()||'Belum diisi.')+'</p>'+heading('7. Tindak Lanjut')+'<p>'+safe($('execActions').value.trim()||'Belum diisi.')+'</p><small>Perlu verifikasi dan persetujuan pejabat proyek sebelum didistribusikan.</small>';
  const win=window.open('','_blank');if(!win){alert('Izinkan pop-up untuk membuka laporan.');return;}
  win.document.open();win.document.write('<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Laporan Eksekutif Civilweek</title><style>body{font:14px Arial,sans-serif;color:#29313c;line-height:1.6;margin:30px}h1{font-size:23px;border-bottom:3px solid #d5a128;padding-bottom:10px}h2{font-size:17px;margin-top:24px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px;text-align:left}.warning{padding:12px;background:#fff3d9;border-left:4px solid #d5a128}@page{size:A4;margin:17mm}</style></head><body>'+body+'</body></html>');win.document.close();win.focus();setTimeout(()=>win.print(),450);
 });
